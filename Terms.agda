@@ -47,7 +47,6 @@ module Terms where
     `hold : ∀ {Γ τ w} → Γ ⊢ τ < w > → Γ ⊢ (` τ at w) < w >
     `leta_`=_`in_ : ∀ {Γ τ σ w w'} → (x : Id) → Γ ⊢ (` τ at w') < w > → ((x , τ , w') ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
     -- Box terms
-    -- `box : ∀ {Γ τ w} → ((ω : World) → Γ ⊢ τ < ω >) → Γ ⊢ (`□ τ) < w >
     `box : ∀ {Γ τ w} → (id : Id) → Γ ⊢ τ < WVar id > → Γ ⊢ (`□ τ) < w >
     `unbox : ∀ {Γ τ w} → Γ ⊢ (`□ τ) < w > → Γ ⊢ τ < w >
     -- Diamond terms
