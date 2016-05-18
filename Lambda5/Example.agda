@@ -1,9 +1,9 @@
-module Example where
+module Lambda5.Example where
   open import Data.List
   open import Relation.Binary.PropositionalEquality hiding ([_])
 
-  open import Types
-  open import Terms
+  open import Lambda5.Types
+  open import Lambda5.Terms
 
   w = client
 

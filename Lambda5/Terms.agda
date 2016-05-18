@@ -1,4 +1,4 @@
-module Terms where
+module Lambda5.Terms where
 
   open import Data.Bool
   open import Data.Nat hiding (erase)
@@ -15,7 +15,7 @@ module Terms where
   open import Data.Empty
   open import Function
 
-  open import Types
+  open import Lambda5.Types
 
   -- Terms that have to type check by definition.
   data _⊢_<_> : Context → Type → World → Set where

@@ -1,4 +1,4 @@
-module Types where
+module Lambda5.Types where
 
   open import Data.Bool
   open import Data.Nat hiding (erase)
