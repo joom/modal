@@ -1,0 +1,7 @@
+# Agda
+*.agdai
+
+# Vim
+*.vim
+
+.DS_Store
