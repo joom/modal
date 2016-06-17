@@ -140,7 +140,8 @@ module ML5toCPS where
       convertExpr {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
     convertExpr K (`sham x) = {!!}
     convertExpr {s = s} K (t ⟨ ω ⟩) = convertExpr {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
-    convertExpr K (`unpack x `= t `in x₁) = {!!}
+    convertExpr {s = s} K (`unpack x `= t `in C) =
+      convertExpr {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v (λ ω → convertExpr {s = {!sub-lemma s' !}} K (C ω))) t
     convertExpr {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
     convertExpr {s = s} K (`val t) = K {s' = id} (convertValue {s = s} t)
     convertExpr {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
@@ -152,7 +153,9 @@ module ML5toCPS where
                                                            (`vval "u" (here refl) refl))) t))))) a
 
     convertExpr {s = s} K (`put {m = m} u t n) =
-      convertExpr {s = s} (λ {_}{s'} v → `put_`=_`in_ {m = convertMobile m} u v (convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'}{s'} → K {Γ'}{{!s'!}}) n)) t
+      convertExpr {s = s} (λ {_}{s'} v →
+        `put_`=_`in_ {m = convertMobile m} u v (convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ''}{s''} → K {Γ''}{s'' ∘ there ∘ s'}) n)) t
+
     convertExpr {Γ}{Γ'}{s = s} K (`prim_`in_ x {pf} t) =
         `prim_`in_ x {convertPrim {x} pf} (convertExpr {s = sub} (λ {Γ''}{s'} → K {Γ''} {s' ∘ there} ) t)
       where
