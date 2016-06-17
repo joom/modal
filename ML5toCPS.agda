@@ -42,6 +42,11 @@ module ML5toCPS where
   convertHyp (x ⦂ τ < w >) = x ⦂ (convertType τ) < w >
   convertHyp (u ∼ C) = u ∼ (λ ω → convertType (C ω))
 
+  convertPrim : ∀ {h} → ML5.Terms.Prim h → CPS.Terms.Prim (convertHyp h)
+  convertPrim `alert = `alert
+  convertPrim `version = `version
+  convertPrim `log = `log
+
   convertCtx : ML5.Types.Context → CPS.Types.Context
   convertCtx = Data.List.map convertHyp
 
@@ -51,9 +56,6 @@ module ML5toCPS where
 
   ⊆-∈-lemma : ∀ {h} {Γ Γ' : CPS.Types.Context} → Γ ⊆ Γ' → h ∈ Γ → h ∈ Γ'
   ⊆-∈-lemma sub i = sub i
-
-  convert-lemma : ∀ {x σ w Γ} → convertCtx (x ⦂ σ < w > ∷ Γ) ≡ (x ⦂ convertType σ < w > ∷ convertCtx Γ)
-  convert-lemma = refl
 
   ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ₓ ↓ τ < w > → Γ' ⊢ₓ ↓ τ < w >
   ⊆-term-lemma s t = {!!}
@@ -109,18 +111,10 @@ module ML5toCPS where
     convertValue {s = s} (`λ x ⦂ σ ⇒ t) =
       `λ (x ++ "_y") ⦂ (` (convertType σ) × ` _ cont) ⇒
       (`let x `=fst (`v (x ++ "_y") (here refl)) `in
-       convertExpr {s = λ {b} i → swap-lemma neq-pf (there i) s}
+       convertExpr {s = sub-lemma (there ∘ s)}
                    (λ {_}{s'} v →
                    `let (x ++ "_k") `=snd `v (x ++ "_y") (⊆-∈-lemma s' (there (here refl)))
                    `in (`call (`v (x ++ "_k") (here refl)) (⊆-term-lemma there v))) t)
-      where
-        postulate
-         -- TODO prove this sometime! If we convert the strings to lists
-         -- then we can do induction on them. This is a very irrelevant part of
-         -- the proof so it doesn't matter much.
-         -- Hint: https://agda.github.io/agda-stdlib/Data.String.Base.html#1046
-         neq-pf : ∀ {s} → s ++ "_y" ≢ s
-
     convertValue {s = s} (` t , u) = ` (convertValue {s = s} t) , (convertValue {s = s} u)
     convertValue {s = s} (`inl t `as σ) = `inl (convertValue {s = s} t) `as (convertType σ)
     convertValue {s = s} (`inr t `as τ) = `inr (convertValue {s = s} t) `as (convertType τ)
@@ -161,26 +155,7 @@ module ML5toCPS where
     convertExpr {s = s} K (`put {m = m} u t n) =
       convertExpr {s = s} (λ {_}{s'} v →
         `put_`=_`in_ {m = convertMobile m} u v (convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ''}{s''} → K {Γ''}{s'' ∘ there ∘ s'}) n)) t
-
-    convertExpr {Γ}{Γ'}{s = s} K (`prim_`in_ x {pf} t) =
-        `prim_`in_ x {convertPrim {x} pf} (convertExpr {s = sub} (λ {Γ''}{s'} → K {Γ''} {s' ∘ there} ) t)
-      where
-        convertPrim : ∀ {x} → isJust (ML5.Terms.primHyp x) → isJust (CPS.Terms.primHyp x)
-        convertPrim {"alert"} is = Data.Unit.tt
-        convertPrim {"version"} is = Data.Unit.tt
-        convertPrim {"log"} is = Data.Unit.tt
-        convertPrim {x} is = ?
-
-        sub : convertCtx (fromJust (ML5.Terms.primHyp x) pf ∷ Γ) ⊆ fromJust (CPS.Terms.primHyp x) (convertPrim {x} pf) ∷ Γ'
-        sub {x = x'} b with x' decHyp (fromJust (CPS.Terms.primHyp x) (convertPrim {x} pf))
-        sub b | yes refl = here refl
-        ... | no q = there (s (neq-pf b))
-          where
-            eq : convertHyp (fromJust (ML5.Terms.primHyp x) pf) ≡ fromJust (CPS.Terms.primHyp x) (convertPrim {x} pf)
-            eq with convertPrim {x} pf
-            ... | n = {!!}
-            neq-pf : x' ∈ (convertHyp (fromJust (ML5.Terms.primHyp x) pf) ∷ convertCtx Γ) → x' ∈ convertCtx Γ
-            neq-pf (here px) = ⊥-elim (q (trans px eq))
-            neq-pf (there i) = i
+    convertExpr {Γ}{Γ'}{s = s} K (`prim x `in t) =
+      `prim convertPrim x `in convertExpr {s = sub-lemma s} (λ {_}{s'} → K {_}{s' ∘ there}) t
     convertExpr {s = s} K (`fst t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=fst v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
     convertExpr {s = s} K (`snd t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=snd v `in K {s' = there ∘ s''} (`v "x" (here refl))) t

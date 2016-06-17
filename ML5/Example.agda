@@ -23,7 +23,7 @@ module ML5.Example where
 
   logVersion : [] ⊢ `Unit < client >
   logVersion =
-    `prim "version" `in
-    (`prim "log" `in
+    `prim `version `in
+    (`prim `log `in
     (` `val (`vval "log" (here refl) refl)
      · `get {m = `Stringᵐ} (`val `any) (`val (`v "version" (there (here refl))))))

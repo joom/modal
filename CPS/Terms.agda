@@ -21,11 +21,10 @@ module CPS.Terms where
   open import Definitions
 
   -- Valid values and values of the primitives of our language.
-  primHyp : Id → Maybe Hyp
-  primHyp "alert" = just ("alert" ⦂ ` `String cont  < client >)
-  primHyp "version" = just ("version" ⦂ `String < server > )
-  primHyp "log" = just ("log" ∼ (λ _ → ` `String cont))
-  primHyp _ = nothing
+  data Prim : Hyp → Set where
+    `alert : Prim ("alert" ⦂ ` ` `String × ` `Unit cont cont < client >)
+    `version : Prim ("version" ⦂ `String < server > )
+    `log : Prim ("log" ∼ (λ ω → ` ` `String × ` `Unit cont cont))
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
@@ -65,7 +64,7 @@ module CPS.Terms where
     -- Continuation expressions
     `leta_`=_`in_ : ∀ {τ w w'} → (x : Id) → Γ ⊢ ↓ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `lets_`=_`in_ : ∀ {C w} → (u : Id) → Γ ⊢ ↓ (`⌘ C) < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `put_`=_`in_ : ∀ {τ w} {m : τ mobile} → (u : Id) → Γ ⊢ ↓ τ < w > → ((u ∼ (λ _ → τ)) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=localhost`in_ : ∀ {w} → (x : Id) → ((x ⦂ ` w addr < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
@@ -75,4 +74,4 @@ module CPS.Terms where
     `call : ∀ {τ w} → Γ ⊢ ↓ ` τ cont < w > → Γ ⊢ ↓ τ < w > → Γ ⊢ ⋆< w >
     `halt : ∀ {w} → Γ ⊢ ⋆< w >
     -- Primitive imports
-    `prim_`in_ : ∀ {w} → (x : Id) {pf : isJust (primHyp x)} → ((fromJust (primHyp x) pf) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `prim_`in_ : ∀ {h w} → (x : Prim h) → (h ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >

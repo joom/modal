@@ -21,11 +21,10 @@ module ML5.Terms where
   open import Definitions
 
   -- Valid values and values of the primitives of our language.
-  primHyp : Id → Maybe Hyp
-  primHyp "alert" = just ("alert" ⦂ ` `String ⇒ `Unit  < client >)
-  primHyp "version" = just ("version" ⦂ `String < server > )
-  primHyp "log" = just ("log" ∼ (λ _ → ` `String ⇒ `Unit))
-  primHyp _ = nothing
+  data Prim : Hyp → Set where
+    `alert : Prim ("alert" ⦂ ` `String ⇒ `Unit  < client >)
+    `version : Prim ("version" ⦂ `String < server > )
+    `log : Prim ("log" ∼ (λ _ → ` `String ⇒ `Unit))
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
@@ -50,13 +49,11 @@ module ML5.Terms where
     `λ_⦂_⇒_ : ∀ {τ w} → (x : Id) (σ : Type) → (x ⦂ σ < w > ∷ Γ) ⊢ τ < w > → Γ ⊢ ↓ (` σ ⇒ τ) < w >
     -- Product and sum terms
     `_,_ : ∀ {τ σ w} → Γ ⊢ ↓ τ < w > →  Γ ⊢ ↓ σ < w > →  Γ ⊢ ↓ (` τ × σ) < w >
-    -- `fst : ∀ {τ σ w} → Γ ⊢ ↓ (` τ × σ) < w > → Γ ⊢ ↓ τ < w >
-    -- `snd : ∀ {τ σ w} → Γ ⊢ ↓ (` τ × σ) < w > → Γ ⊢ ↓ σ < w >
     `fst : ∀ {τ σ w} → Γ ⊢ (` τ × σ) < w > → Γ ⊢ τ < w >
     `snd : ∀ {τ σ w} → Γ ⊢ (` τ × σ) < w > → Γ ⊢ σ < w >
     `inl_`as_ : ∀ {τ w} → Γ ⊢ ↓ τ < w > → (σ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
     `inr_`as_ : ∀ {σ w} → Γ ⊢ ↓ σ < w > → (τ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
-    `case_`of_||_ : ∀ {τ σ υ w} → Γ ⊢ (` τ ⊎ σ) < w > → Γ ⊢ (` τ ⇒ υ) < w > → Γ ⊢ (` σ ⇒ υ) < w > → Γ ⊢ υ < w >
+    `case_`of_||_ : ∀ {τ σ υ w} → Γ ⊢ ↓ (` τ ⊎ σ) < w > → Γ ⊢ (` τ ⇒ υ) < w > → Γ ⊢ (` σ ⇒ υ) < w > → Γ ⊢ υ < w >
     -- At terms
     `hold : ∀ {τ w w'} → Γ ⊢ ↓ τ < w' > → Γ ⊢ ↓ (` τ at w') < w >
     `leta_`=_`in_ : ∀ {τ σ w w'} → (x : Id) → Γ ⊢ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
@@ -75,6 +72,6 @@ module ML5.Terms where
     -- Other
     `val : ∀ {τ w} → Γ ⊢ ↓ τ < w > → Γ ⊢ τ < w >
     `get : ∀ {τ w w'} {m : τ mobile} → Γ ⊢ ` w' addr < w > → Γ ⊢ τ < w' > → Γ ⊢ τ < w >
-    `put : ∀ {τ σ w} {m : τ mobile} (u : Id) → Γ ⊢ τ < w > → ((u ∼ (λ _ → τ)) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
+    `put : ∀ {C σ w} {m : (C w) mobile} (u : Id) → Γ ⊢ C w < w > → ((u ∼ C) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
     -- Primitive imports
-    `prim_`in_ : ∀ {w σ} (x : Id) {pf : isJust (primHyp x)} → ((fromJust (primHyp x) pf) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
+    `prim_`in_ : ∀ {h w σ} (x : Prim h) → (h ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
