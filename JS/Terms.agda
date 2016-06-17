@@ -1,6 +1,4 @@
-module JS.JS where
-
-module SimplyJS-TypedLambdaCalculus where
+module JS.Terms where
 
   open import Data.Bool
   open import Data.Float
@@ -14,14 +12,13 @@ module SimplyJS-TypedLambdaCalculus where
   open import Relation.Binary.PropositionalEquality hiding ([_])
   open import Relation.Nullary
   open import Relation.Nullary.Decidable
-  import Data.String
+  open import Data.String
   open import Data.Nat.Show
-  open import Data.List hiding ([_]) renaming (_++_ to _·_)
+  open import Data.List hiding ([_]) renaming (_++_ to _+++_)
   open import Data.Empty
   open import Function
 
-  Id : Set
-  Id = String
+  open import Definitions
 
   mutual
     data JS-Expr : Set where
@@ -49,8 +46,8 @@ module SimplyJS-TypedLambdaCalculus where
     render (JSNumber (inj₂ x)) = Data.Float.show x
     render (JSString x) = "\"" ++ x ++ "\""
     render (JSVar x) = x
-    render (JSAbst x stm) = "(function (" ++ x ++ ") {return "  ++ renderStm stm ++ ";})"
-    render (JSApp expr1 expr2) = render expr1 ++ "(" ++ render expr2 ++ ")"
+    render (JSAbst x stm) = "(function (" ++ {!!} ++ ") {return "  ++ renderStm stm ++ ";})"
+    render (JSApp expr1 expr2) = render {!!} ++ "(" ++ render expr2 ++ ")"
 
   renderProg : JS-Program → String
   renderProg (JS-Prog l) = unlines (Data.List.map renderStm l)

@@ -70,6 +70,25 @@ module ML5toCPS where
   swap-lemma neq (there (here px)) s | no q | no q' = ⊥-elim (q' px)
   swap-lemma neq (there (there i)) s | no q | no q' = there (there (s i))
 
+  sub-lemma : ∀ {Γ Δ} {h : Hypₓ} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
+  sub-lemma {h = h} s {x} i with x decHyp h
+  ... | yes p = here p
+  sub-lemma s (here px) | no q = ⊥-elim (q px)
+  sub-lemma s (there i) | no q = there (s i)
+
+  convertMobile : ∀ {τ} → ML5.Types._mobile τ → CPS.Types._mobile (convertType τ)
+  convertMobile `Boolᵐ = `Boolᵐ
+  convertMobile `Natᵐ = `Natᵐ
+  convertMobile `Unitᵐ = `Unitᵐ
+  convertMobile `Stringᵐ = `Stringᵐ
+  convertMobile `_atᵐ_ = `_atᵐ_
+  convertMobile (` m ×ᵐ n) = ` convertMobile m ×ᵐ convertMobile n
+  convertMobile (` m ⊎ᵐ n) = ` (convertMobile m) ⊎ᵐ (convertMobile n)
+  convertMobile (`∀ᵐ m) = `∀ᵐ (convertMobile m)
+  convertMobile (`∃ᵐ m) = `∃ᵐ (convertMobile m)
+  convertMobile `⌘ᵐ = `⌘ᵐ
+  convertMobile _addrᵐ = _addrᵐ
+
   mutual
     convertValue : ∀ {Γ Γ' τ w } {s : (convertCtx Γ) ⊆ Γ'} → Γ ⊢₅ ↓ τ < w > → Γ' ⊢ₓ ↓ (convertType τ) < w >
     convertValue `tt = `tt
@@ -113,17 +132,27 @@ module ML5toCPS where
                 → Γ ⊢₅ τ < w >
                 → Γ' ⊢ₓ ⋆< w >
     convertExpr K (`if t `then t₁ `else t₂) = {!!}
-    convertExpr K (` t · u) = convertExpr (λ v → convertExpr (λ v' → `call {!v!} {!u!}) u) t
+    convertExpr {s = s} K (` t · u) = convertExpr {s = s} (λ {_}{s'} v → convertExpr {s = s' ∘ s} (λ v' → `call {!v!} {!u!}) u) t
     convertExpr K (`case t `of u || v) = {!!}
-    convertExpr {s = s} K (`leta x `= t `in u) = convertExpr {s = s} (λ v → `leta x `= v `in convertExpr K u) t
-    convertExpr {s = s} K (`letsham x `= t `in u) = convertExpr {s = s} (λ v → `lets x `= v `in convertExpr K u) t
+    convertExpr {s = s} K (`leta x `= t `in u) =
+      convertExpr {s = s} (λ {Γ''}{s'} v → `leta x `= v `in convertExpr {s = sub-lemma (s' ∘ s) } (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there  ∘ s'}) u) t
+    convertExpr {s = s} K (`letsham x `= t `in u) =
+      convertExpr {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
     convertExpr K (`sham x) = {!!}
-    convertExpr K (t ⟨ ω ⟩) = {!!}
+    convertExpr {s = s} K (t ⟨ ω ⟩) = convertExpr {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
     convertExpr K (`unpack x `= t `in x₁) = {!!}
-    convertExpr K `localhost = `let "x" `=localhost`in K {s' = {!!}} (`v "x" (here refl))
-    convertExpr {s = s} K (`val t) = K {!t!}
-    convertExpr K (`get a t) = convertExpr (λ vₐ → `let "x" `=localhost`in {!(`put ? `= ? `in ?)!}) a
-    convertExpr K (`put u t t₁) = {!!}
+    convertExpr {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
+    convertExpr {s = s} K (`val t) = K {s' = id} (convertValue {s = s} t)
+    convertExpr {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
+      convertExpr {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
+                          ((`put_`=_`in_ {m = _addrᵐ} "ur" (`v "x" (here refl))
+                            (`go[ w' , {!vₐ!} ] (convertExpr {s = there ∘ there ∘ s' ∘ s}
+                                                (λ {_}{s'} v → `put_`=_`in_ {m = convertMobile m} "u" v
+                                                       (`go[ w , `vval "ur" {!!} refl ] (λ {Γ''}{s'} → K {Γ''}{{!s!}})
+                                                           (`vval "u" (here refl) refl))) t))))) a
+
+    convertExpr {s = s} K (`put {m = m} u t n) =
+      convertExpr {s = s} (λ {_}{s'} v → `put_`=_`in_ {m = convertMobile m} u v (convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'}{s'} → K {Γ'}{{!s'!}}) n)) t
     convertExpr {Γ}{Γ'}{s = s} K (`prim_`in_ x {pf} t) =
         `prim_`in_ x {convertPrim {x} pf} (convertExpr {s = sub} (λ {Γ''}{s'} → K {Γ''} {s' ∘ there} ) t)
       where
@@ -145,7 +174,5 @@ module ML5toCPS where
             neq-pf : x' ∈ (convertHyp (fromJust (ML5.Terms.primHyp x) pf) ∷ convertCtx Γ) → x' ∈ convertCtx Γ
             neq-pf (here px) = ⊥-elim (q (trans px eq))
             neq-pf (there i) = i
-
-
     convertExpr {s = s} K (`fst t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=fst v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
     convertExpr {s = s} K (`snd t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=snd v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
