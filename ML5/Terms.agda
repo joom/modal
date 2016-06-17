@@ -62,7 +62,7 @@ module ML5.Terms where
     `leta_`=_`in_ : ∀ {τ σ w w'} → (x : Id) → Γ ⊢ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
     -- Shamrock terms
     `letsham_`=_`in_ : ∀ {σ w} {A : World → Type} → (u : Id) → Γ ⊢ `⌘ A < w > → (u ∼ A ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
-    `sham : ∀ {w} {A : World → Type} → ((ω : World) → Γ ⊢ (A ω) < w >) → Γ ⊢ `⌘ A < w >
+    `sham : ∀ {w} {A : World → Type} → ((ω : World) → Γ ⊢ ↓ (A ω) < w >) → Γ ⊢ ↓ `⌘ A < w >
     -- ∀ terms
     `Λ : ∀ {w} {A : World → Type} → ((ω : World) → Γ ⊢ ↓ A ω < w >) → Γ ⊢ ↓ `∀ A < w >
     _⟨_⟩ : ∀ {w} {A : World → Type} → Γ ⊢ `∀ A < w > → (ω : World) → Γ ⊢ (A ω) < w >

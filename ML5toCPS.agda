@@ -55,6 +55,9 @@ module ML5toCPS where
   convert-lemma : ∀ {x σ w Γ} → convertCtx (x ⦂ σ < w > ∷ Γ) ≡ (x ⦂ convertType σ < w > ∷ convertCtx Γ)
   convert-lemma = refl
 
+  ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ₓ ↓ τ < w > → Γ' ⊢ₓ ↓ τ < w >
+  ⊆-term-lemma s t = {!!}
+
   -- If there are two things in the context with different names, their order doesn't matter.
   -- We also included subsets to that proposition.
   swap-lemma : ∀ {x y σ τ w w' Γ Γ'} {b : Hypₓ}
@@ -109,7 +112,7 @@ module ML5toCPS where
        convertExpr {s = λ {b} i → swap-lemma neq-pf (there i) s}
                    (λ {_}{s'} v →
                    `let (x ++ "_k") `=snd `v (x ++ "_y") (⊆-∈-lemma s' (there (here refl)))
-                   `in (`call (`v (x ++ "_k") (here refl)) {!v!})) t)
+                   `in (`call (`v (x ++ "_k") (here refl)) (⊆-term-lemma there v))) t)
       where
         postulate
          -- TODO prove this sometime! If we convert the strings to lists
@@ -123,6 +126,7 @@ module ML5toCPS where
     convertValue {s = s} (`inr t `as τ) = `inr (convertValue {s = s} t) `as (convertType τ)
     convertValue {s = s} (`hold t) = `hold (convertValue {s = s} t)
     convertValue {s = s} (`Λ C) = `Λ (λ ω → convertValue {s = s} (C ω))
+    convertValue {s = s} (`sham C) = `sham (λ ω → convertValue {s = s} (C ω))
     convertValue {s = s} (`wpair ω t) = `pack ω (convertValue {s = s} t)
     convertValue `any = `any
 
@@ -132,25 +136,27 @@ module ML5toCPS where
                 → Γ ⊢₅ τ < w >
                 → Γ' ⊢ₓ ⋆< w >
     convertExpr K (`if t `then t₁ `else t₂) = {!!}
-    convertExpr {s = s} K (` t · u) = convertExpr {s = s} (λ {_}{s'} v → convertExpr {s = s' ∘ s} (λ v' → `call {!v!} {!u!}) u) t
     convertExpr K (`case t `of u || v) = {!!}
+    convertExpr {s = s} K (` t · u) =
+      convertExpr {s = s} (λ {_}{s'} v → convertExpr {s = s' ∘ s}
+        (λ {_}{s''} v' → `call (⊆-term-lemma s'' v) (` v' , (`λ "x" ⦂ _ ⇒ K {s' = there ∘ s'' ∘ s'} (`v "x" (here refl))))) u) t
     convertExpr {s = s} K (`leta x `= t `in u) =
       convertExpr {s = s} (λ {Γ''}{s'} v → `leta x `= v `in convertExpr {s = sub-lemma (s' ∘ s) } (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there  ∘ s'}) u) t
     convertExpr {s = s} K (`letsham x `= t `in u) =
       convertExpr {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
-    convertExpr K (`sham x) = {!!}
     convertExpr {s = s} K (t ⟨ ω ⟩) = convertExpr {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
     convertExpr {s = s} K (`unpack x `= t `in C) =
-      convertExpr {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v (λ ω → convertExpr {s = {!sub-lemma s' !}} K (C ω))) t
+      convertExpr {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v
+                  (λ ω → convertExpr {s = sub-lemma (s' ∘ s) } (λ {_}{s''} → K {_}{s'' ∘ there ∘ s'}) (C ω))) t
     convertExpr {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
     convertExpr {s = s} K (`val t) = K {s' = id} (convertValue {s = s} t)
     convertExpr {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
       convertExpr {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
                           ((`put_`=_`in_ {m = _addrᵐ} "ur" (`v "x" (here refl))
-                            (`go[ w' , {!vₐ!} ] (convertExpr {s = there ∘ there ∘ s' ∘ s}
-                                                (λ {_}{s'} v → `put_`=_`in_ {m = convertMobile m} "u" v
-                                                       (`go[ w , `vval "ur" {!!} refl ] (λ {Γ''}{s'} → K {Γ''}{{!s!}})
-                                                           (`vval "u" (here refl) refl))) t))))) a
+                            (`go[ w' , ⊆-term-lemma (there ∘ there) vₐ ] (convertExpr {s = there ∘ there ∘ s' ∘ s}
+                                                (λ {_}{s''} v → `put_`=_`in_ {m = convertMobile m} "u" v
+                                                       (`go[ w , `vval "ur" (there (s'' (here refl))) refl ]
+                                                       K {s' = there ∘ s'' ∘ there ∘ there ∘ s'} (`vval "u" (here refl) refl))) t))))) a
 
     convertExpr {s = s} K (`put {m = m} u t n) =
       convertExpr {s = s} (λ {_}{s'} v →
@@ -163,9 +169,8 @@ module ML5toCPS where
         convertPrim {"alert"} is = Data.Unit.tt
         convertPrim {"version"} is = Data.Unit.tt
         convertPrim {"log"} is = Data.Unit.tt
-        convertPrim {x} is with ML5.Terms.primHyp x
-        ... | nothing = {!!}
-        ... | just h = {!!}
+        convertPrim {x} is = ?
+
         sub : convertCtx (fromJust (ML5.Terms.primHyp x) pf ∷ Γ) ⊆ fromJust (CPS.Terms.primHyp x) (convertPrim {x} pf) ∷ Γ'
         sub {x = x'} b with x' decHyp (fromJust (CPS.Terms.primHyp x) (convertPrim {x} pf))
         sub b | yes refl = here refl
