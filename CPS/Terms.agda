@@ -36,7 +36,6 @@ module CPS.Terms where
     `_∧_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     `_∨_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     `¬_  : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
-    -- `if_`then_`else_ : ∀ {τ w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w >
     -- ℕ values
     `n_  : ∀ {w} → ℕ → Γ ⊢ ↓ `Nat < w >
     `_≤_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Bool < w >
@@ -44,13 +43,12 @@ module CPS.Terms where
     `_*_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w >
     -- Abstraction & context values
     `v : ∀ {τ w} → (x : Id) → x ⦂ τ < w > ∈ Γ → Γ ⊢ ↓ τ < w >
-    `vval : ∀ {τ w C} → (u : Id) → u ∼ C ∈ Γ → C w ≡ τ → Γ ⊢ ↓ τ < w >
+    `vval : ∀ {w C} → (u : Id) → u ∼ C ∈ Γ → Γ ⊢ ↓ C w < w >
     `λ_⦂_⇒_ : ∀ {w} → (x : Id) (σ : Type) → (c : (x ⦂ σ < w > ∷ Γ) ⊢ ⋆< w >) → Γ ⊢ ↓ (` σ cont) < w >
     -- Pair and sum values
     `_,_ : ∀ {τ σ w} → Γ ⊢ ↓ τ < w > →  Γ ⊢ ↓ σ < w > →  Γ ⊢ ↓ (` τ × σ) < w >
     `inl_`as_ : ∀ {τ w} → Γ ⊢ ↓ τ < w > → (σ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
     `inr_`as_ : ∀ {σ w} → Γ ⊢ ↓ σ < w > → (τ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
-    --`case_`of_||_ : ∀ {τ σ υ w} → Γ ⊢ (` τ ⊎ σ) < w > → Γ ⊢ (` τ ⇒ υ) < w > → Γ ⊢ (` σ ⇒ υ) < w > → Γ ⊢ υ < w >
     -- At values
     `hold : ∀ {τ w w'} → Γ ⊢ ↓ τ < w' > → Γ ⊢ ↓ (` τ at w') < w >
     -- Shamrock values
@@ -62,6 +60,9 @@ module CPS.Terms where
     -- Address values
     `any : ∀ {w w'} → Γ ⊢ ↓ ` w addr < w' >
     -- Continuation expressions
+    `if_`then_`else_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ⋆< w > → Γ ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `letcase_,_`=_`in_`or_ : ∀ {τ σ w} → (x y : Id) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
+                           → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → ((y ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `leta_`=_`in_ : ∀ {τ w w'} → (x : Id) → Γ ⊢ ↓ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `lets_`=_`in_ : ∀ {C w} → (u : Id) → Γ ⊢ ↓ (`⌘ C) < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
@@ -75,3 +76,8 @@ module CPS.Terms where
     `halt : ∀ {w} → Γ ⊢ ⋆< w >
     -- Primitive imports
     `prim_`in_ : ∀ {h w} → (x : Prim h) → (h ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+
+  -- Weakening
+  postulate
+    ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
+ -- ⊆-term-lemma s t = {!!}

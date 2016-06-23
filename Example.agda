@@ -1,4 +1,4 @@
-module ML5.Example where
+module Example where
 
   open import Data.Bool
   open import Data.Nat hiding (erase)
@@ -18,12 +18,18 @@ module ML5.Example where
   open import Function
 
   open import Definitions
-  open import ML5.Types
-  open import ML5.Terms
+  open import ML5.Types renaming (Type to Type₅ ; Hyp to Hyp₅)
+  open import ML5.Terms renaming (_⊢_ to _⊢₅_)
+  open import CPS.Types renaming (Type to Typeₓ ; Hyp to Hypₓ)
+  open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
+  open import ML5toCPS
 
-  logVersion : [] ⊢ `Unit < client >
+  logVersion : [] ⊢₅ `Unit < client >
   logVersion =
     `prim `version `in
     (`prim `log `in
-    (` `val (`vval "log" (here refl) refl)
+    (` `val (`vval "log" (here refl))
      · `get {m = `Stringᵐ} (`val `any) (`val (`v "version" (there (here refl))))))
+
+  logVersionCPS : [] ⊢ₓ ⋆< client >
+  logVersionCPS = convertExpr (λ v → `halt) logVersion

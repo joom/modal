@@ -57,8 +57,6 @@ module ML5toCPS where
   ⊆-∈-lemma : ∀ {h} {Γ Γ' : CPS.Types.Context} → Γ ⊆ Γ' → h ∈ Γ → h ∈ Γ'
   ⊆-∈-lemma sub i = sub i
 
-  ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ₓ ↓ τ < w > → Γ' ⊢ₓ ↓ τ < w >
-  ⊆-term-lemma s t = {!!}
 
   -- If there are two things in the context with different names, their order doesn't matter.
   -- We also included subsets to that proposition.
@@ -95,67 +93,84 @@ module ML5toCPS where
   convertMobile _addrᵐ = _addrᵐ
 
   mutual
-    convertValue : ∀ {Γ Γ' τ w } {s : (convertCtx Γ) ⊆ Γ'} → Γ ⊢₅ ↓ τ < w > → Γ' ⊢ₓ ↓ (convertType τ) < w >
-    convertValue `tt = `tt
-    convertValue `true = `true
-    convertValue `false = `false
-    convertValue {s = s} (` t ∧ u) = ` (convertValue {s = s} t) ∧ (convertValue {s = s} u)
-    convertValue {s = s} (` t ∨ u) = ` (convertValue {s = s} t) ∨ (convertValue {s = s} u)
-    convertValue {s = s} (`¬ t) = `¬ (convertValue {s = s} t)
-    convertValue (`n x) = `n x
-    convertValue {s = s} (` t ≤ u) = ` (convertValue {s = s} t) ≤ (convertValue {s = s} u)
-    convertValue {s = s} (` t + u) = ` (convertValue {s = s} t) + (convertValue {s = s} u)
-    convertValue {s = s} (` t * u) = ` (convertValue {s = s} t) * (convertValue {s = s} u)
-    convertValue {s = s} (`v x ∈) = `v x (⊆-∈-lemma s (convert∈ ∈))
-    convertValue {s = s} (`vval u ∈ eq) = `vval u (⊆-∈-lemma s (convert∈ ∈)) (cong convertType eq)
-    convertValue {s = s} (`λ x ⦂ σ ⇒ t) =
+    convertValue' : ∀ {Γ Γ' τ w } {s : (convertCtx Γ) ⊆ Γ'} → Γ ⊢₅ ↓ τ < w > → Γ' ⊢ₓ ↓ (convertType τ) < w >
+    convertValue' `tt = `tt
+    convertValue' `true = `true
+    convertValue' `false = `false
+    convertValue' {s = s} (` t ∧ u) = ` (convertValue' {s = s} t) ∧ (convertValue' {s = s} u)
+    convertValue' {s = s} (` t ∨ u) = ` (convertValue' {s = s} t) ∨ (convertValue' {s = s} u)
+    convertValue' {s = s} (`¬ t) = `¬ (convertValue' {s = s} t)
+    convertValue' (`n x) = `n x
+    convertValue' {s = s} (` t ≤ u) = ` (convertValue' {s = s} t) ≤ (convertValue' {s = s} u)
+    convertValue' {s = s} (` t + u) = ` (convertValue' {s = s} t) + (convertValue' {s = s} u)
+    convertValue' {s = s} (` t * u) = ` (convertValue' {s = s} t) * (convertValue' {s = s} u)
+    convertValue' {s = s} (`v x ∈) = `v x (⊆-∈-lemma s (convert∈ ∈))
+    convertValue' {s = s} (`vval u ∈) = `vval u (⊆-∈-lemma s (convert∈ ∈))
+    convertValue' {s = s} (`λ x ⦂ σ ⇒ t) =
       `λ (x ++ "_y") ⦂ (` (convertType σ) × ` _ cont) ⇒
       (`let x `=fst (`v (x ++ "_y") (here refl)) `in
-       convertExpr {s = sub-lemma (there ∘ s)}
+       convertExpr' {s = sub-lemma (there ∘ s)}
                    (λ {_}{s'} v →
                    `let (x ++ "_k") `=snd `v (x ++ "_y") (⊆-∈-lemma s' (there (here refl)))
                    `in (`call (`v (x ++ "_k") (here refl)) (⊆-term-lemma there v))) t)
-    convertValue {s = s} (` t , u) = ` (convertValue {s = s} t) , (convertValue {s = s} u)
-    convertValue {s = s} (`inl t `as σ) = `inl (convertValue {s = s} t) `as (convertType σ)
-    convertValue {s = s} (`inr t `as τ) = `inr (convertValue {s = s} t) `as (convertType τ)
-    convertValue {s = s} (`hold t) = `hold (convertValue {s = s} t)
-    convertValue {s = s} (`Λ C) = `Λ (λ ω → convertValue {s = s} (C ω))
-    convertValue {s = s} (`sham C) = `sham (λ ω → convertValue {s = s} (C ω))
-    convertValue {s = s} (`wpair ω t) = `pack ω (convertValue {s = s} t)
-    convertValue `any = `any
+    convertValue' {s = s} (` t , u) = ` (convertValue' {s = s} t) , (convertValue' {s = s} u)
+    convertValue' {s = s} (`inl t `as σ) = `inl (convertValue' {s = s} t) `as (convertType σ)
+    convertValue' {s = s} (`inr t `as τ) = `inr (convertValue' {s = s} t) `as (convertType τ)
+    convertValue' {s = s} (`hold t) = `hold (convertValue' {s = s} t)
+    convertValue' {s = s} (`Λ C) = `Λ (λ ω → convertValue' {s = s} (C ω))
+    convertValue' {s = s} (`sham C) = `sham (λ ω → convertValue' {s = s} (C ω))
+    convertValue' {s = s} (`wpair ω t) = `pack ω (convertValue' {s = s} t)
+    convertValue' `any = `any
 
-    convertExpr : ∀ {Γ Γ' τ w}
+    convertExpr' : ∀ {Γ Γ' τ w}
                 → {s : (convertCtx Γ) ⊆ Γ'}
                 → (∀ {Γ''} {s' : Γ' ⊆ Γ''} → Γ'' ⊢ₓ ↓ (convertType τ) < w > → Γ'' ⊢ₓ ⋆< w >)
                 → Γ ⊢₅ τ < w >
                 → Γ' ⊢ₓ ⋆< w >
-    convertExpr K (`if t `then t₁ `else t₂) = {!!}
-    convertExpr K (`case t `of u || v) = {!!}
-    convertExpr {s = s} K (` t · u) =
-      convertExpr {s = s} (λ {_}{s'} v → convertExpr {s = s' ∘ s}
+    convertExpr' {s = s} K (`if b `then t `else u) =
+      convertExpr' {s = s} (λ {_}{s'} v →
+        `if v `then convertExpr' {s = s' ∘ s} (λ {_}{s''} → K {_}{s'' ∘ s'}) t
+        `else convertExpr' {s = s' ∘ s} (λ {_}{s''} → K {_}{s'' ∘ s'}) u) b
+    convertExpr' {s = s} K (`case p `of x ⇒ t || y ⇒ u) =
+      convertExpr' {s = s} (λ {_}{s'} v →
+        `letcase x , y `= v `in convertExpr' {s = sub-lemma (s' ∘ s)} (λ {_}{s''} → K {_}{s'' ∘ there ∘  s'}) t
+        `or convertExpr' {s = sub-lemma (s' ∘ s)} (λ {_}{s''} → K {_}{s'' ∘ there ∘ s'}) u) p
+    convertExpr' {s = s} K (` t · u) =
+      convertExpr' {s = s} (λ {_}{s'} v → convertExpr' {s = s' ∘ s}
         (λ {_}{s''} v' → `call (⊆-term-lemma s'' v) (` v' , (`λ "x" ⦂ _ ⇒ K {s' = there ∘ s'' ∘ s'} (`v "x" (here refl))))) u) t
-    convertExpr {s = s} K (`leta x `= t `in u) =
-      convertExpr {s = s} (λ {Γ''}{s'} v → `leta x `= v `in convertExpr {s = sub-lemma (s' ∘ s) } (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there  ∘ s'}) u) t
-    convertExpr {s = s} K (`letsham x `= t `in u) =
-      convertExpr {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
-    convertExpr {s = s} K (t ⟨ ω ⟩) = convertExpr {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
-    convertExpr {s = s} K (`unpack x `= t `in C) =
-      convertExpr {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v
-                  (λ ω → convertExpr {s = sub-lemma (s' ∘ s) } (λ {_}{s''} → K {_}{s'' ∘ there ∘ s'}) (C ω))) t
-    convertExpr {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
-    convertExpr {s = s} K (`val t) = K {s' = id} (convertValue {s = s} t)
-    convertExpr {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
-      convertExpr {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
+    convertExpr' {s = s} K (`leta x `= t `in u) =
+      convertExpr' {s = s} (λ {Γ''}{s'} v → `leta x `= v `in convertExpr' {s = sub-lemma (s' ∘ s) } (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there  ∘ s'}) u) t
+    convertExpr' {s = s} K (`letsham x `= t `in u) =
+      convertExpr' {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr' {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
+    convertExpr' {s = s} K (t ⟨ ω ⟩) = convertExpr' {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
+    convertExpr' {s = s} K (`unpack x `= t `in C) =
+      convertExpr' {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v
+                  (λ ω → convertExpr' {s = sub-lemma (s' ∘ s) } (λ {_}{s''} → K {_}{s'' ∘ there ∘ s'}) (C ω))) t
+    convertExpr' {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
+    convertExpr' {s = s} K (`val t) = K {s' = id} (convertValue' {s = s} t)
+    convertExpr' {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
+      convertExpr' {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
                           ((`put_`=_`in_ {m = _addrᵐ} "ur" (`v "x" (here refl))
-                            (`go[ w' , ⊆-term-lemma (there ∘ there) vₐ ] (convertExpr {s = there ∘ there ∘ s' ∘ s}
+                            (`go[ w' , ⊆-term-lemma (there ∘ there) vₐ ] (convertExpr' {s = there ∘ there ∘ s' ∘ s}
                                                 (λ {_}{s''} v → `put_`=_`in_ {m = convertMobile m} "u" v
-                                                       (`go[ w , `vval "ur" (there (s'' (here refl))) refl ]
-                                                       K {s' = there ∘ s'' ∘ there ∘ there ∘ s'} (`vval "u" (here refl) refl))) t))))) a
+                                                       (`go[ w , `vval "ur" (there (s'' (here refl))) ]
+                                                       K {s' = there ∘ s'' ∘ there ∘ there ∘ s'} (`vval "u" (here refl)))) t))))) a
+    convertExpr' {s = s} K (`put {m = m} u t n) =
+      convertExpr' {s = s} (λ {_}{s'} v →
+        `put_`=_`in_ {m = convertMobile m} u v (convertExpr' {s = sub-lemma (s' ∘ s)} (λ {Γ''}{s''} → K {Γ''}{s'' ∘ there ∘ s'}) n)) t
+    convertExpr' {Γ}{Γ'}{s = s} K (`prim x `in t) =
+      `prim convertPrim x `in convertExpr' {s = sub-lemma s} (λ {_}{s'} → K {_}{s' ∘ there}) t
+    convertExpr' {s = s} K (`fst t) = convertExpr' {s = s} (λ {_}{s''} v → `let "x" `=fst v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
+    convertExpr' {s = s} K (`snd t) = convertExpr' {s = s} (λ {_}{s''} v → `let "x" `=snd v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
 
-    convertExpr {s = s} K (`put {m = m} u t n) =
-      convertExpr {s = s} (λ {_}{s'} v →
-        `put_`=_`in_ {m = convertMobile m} u v (convertExpr {s = sub-lemma (s' ∘ s)} (λ {Γ''}{s''} → K {Γ''}{s'' ∘ there ∘ s'}) n)) t
-    convertExpr {Γ}{Γ'}{s = s} K (`prim x `in t) =
-      `prim convertPrim x `in convertExpr {s = sub-lemma s} (λ {_}{s'} → K {_}{s' ∘ there}) t
-    convertExpr {s = s} K (`fst t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=fst v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
-    convertExpr {s = s} K (`snd t) = convertExpr {s = s} (λ {_}{s''} v → `let "x" `=snd v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
+
+    -- Corollary
+    -- For some reason it was easier to prove the ones above.
+    convertExpr : ∀ {Γ τ w}
+                → (∀ {Γ'} {s' : (convertCtx Γ) ⊆ Γ'} → Γ' ⊢ₓ ↓ (convertType τ) < w > → Γ' ⊢ₓ ⋆< w >)
+                → Γ ⊢₅ τ < w >
+                → (convertCtx Γ) ⊢ₓ ⋆< w >
+    convertExpr K t = convertExpr' {s = id} (λ {Δ}{s'} → K {_}{s'}) t
+
+    convertValue : ∀ {Γ τ w} → Γ ⊢₅ ↓ τ < w > → (convertCtx Γ) ⊢ₓ ↓ (convertType τ) < w >
+    convertValue t = convertValue' {s = id} t

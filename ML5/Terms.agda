@@ -36,7 +36,7 @@ module ML5.Terms where
     `_∧_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     `_∨_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     `¬_  : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
-    `if_`then_`else_ : ∀ {τ w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w >
+    `if_`then_`else_ : ∀ {τ w} → Γ ⊢ `Bool < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w > → Γ ⊢ τ < w >
     -- ℕ terms
     `n_  : ∀ {w} → ℕ → Γ ⊢ ↓ `Nat < w >
     `_≤_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Bool < w >
@@ -44,7 +44,7 @@ module ML5.Terms where
     `_*_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w >
     -- Abstraction & context terms
     `v : ∀ {τ w} → (x : Id) → x ⦂ τ < w > ∈ Γ → Γ ⊢ ↓ τ < w >
-    `vval : ∀ {τ w C} → (u : Id) → u ∼ C ∈ Γ → C w ≡ τ → Γ ⊢ ↓ τ < w >
+    `vval : ∀ {w C} → (u : Id) → u ∼ C ∈ Γ → Γ ⊢ ↓ C w < w >
     `_·_ : ∀ {τ σ w} → Γ ⊢ (` τ ⇒ σ) < w > → Γ ⊢ τ < w > → Γ ⊢ σ < w >
     `λ_⦂_⇒_ : ∀ {τ w} → (x : Id) (σ : Type) → (x ⦂ σ < w > ∷ Γ) ⊢ τ < w > → Γ ⊢ ↓ (` σ ⇒ τ) < w >
     -- Product and sum terms
@@ -53,7 +53,9 @@ module ML5.Terms where
     `snd : ∀ {τ σ w} → Γ ⊢ (` τ × σ) < w > → Γ ⊢ σ < w >
     `inl_`as_ : ∀ {τ w} → Γ ⊢ ↓ τ < w > → (σ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
     `inr_`as_ : ∀ {σ w} → Γ ⊢ ↓ σ < w > → (τ : Type) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
-    `case_`of_||_ : ∀ {τ σ υ w} → Γ ⊢ ↓ (` τ ⊎ σ) < w > → Γ ⊢ (` τ ⇒ υ) < w > → Γ ⊢ (` σ ⇒ υ) < w > → Γ ⊢ υ < w >
+    `case_`of_⇒_||_⇒_ : ∀ {τ σ υ w} → Γ ⊢ (` τ ⊎ σ) < w > → (x : Id) → (x ⦂ τ < w > ∷ Γ) ⊢ υ < w >
+                       → (y : Id) → (y ⦂ σ < w > ∷ Γ) ⊢ υ < w > → Γ ⊢ υ < w >
+    --  `case_`of_||_ : ∀ {τ σ υ w} → Γ ⊢ (` τ ⊎ σ) < w > → Γ ⊢ ↓ (` τ ⇒ υ) < w > → Γ ⊢ ↓ (` σ ⇒ υ) < w > → Γ ⊢ υ < w >
     -- At terms
     `hold : ∀ {τ w w'} → Γ ⊢ ↓ τ < w' > → Γ ⊢ ↓ (` τ at w') < w >
     `leta_`=_`in_ : ∀ {τ σ w w'} → (x : Id) → Γ ⊢ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
