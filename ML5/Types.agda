@@ -19,12 +19,6 @@ module ML5.Types where
 
   open import Definitions
 
-  _decW_ : (w : World) → (w' : World) → Dec (w ≡ w')
-  client decW client = yes refl
-  server decW server = yes refl
-  client decW server = no (λ ())
-  server decW client = no (λ ())
-
   data Type : Set where
     `Nat `Bool `Unit `String : Type
     `_⇒_ `_×_ `_⊎_ : Type → Type → Type
@@ -42,11 +36,6 @@ module ML5.Types where
     ↓_<_> : (τ : Type) (w : World) → Conc -- Value
 
   Context = List Hyp
-
-  -- infixl 5 _∈_
-  -- data _∈_ : Hyp → Context → Set where
-  --   ∈-here  : ∀ {α Γ} → α ∈ (α ∷ Γ)
-  --   ∈-there : ∀ {α β Γ} → α ∈ Γ → α ∈ (β ∷ Γ)
 
   data _mobile : Type → Set where
     `Boolᵐ : `Bool mobile

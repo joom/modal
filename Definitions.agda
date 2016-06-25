@@ -9,7 +9,7 @@ module Definitions where
   open import Relation.Binary.PropositionalEquality hiding ([_])
   open import Relation.Nullary
   open import Relation.Nullary.Decidable
-  import Data.String
+  open import Data.String
   open import Data.Nat.Show
   open import Data.List hiding ([_])
   open import Data.Empty
@@ -25,9 +25,18 @@ module Definitions where
 
   Id = Data.String.String
 
+  concatStr : List String → String
+  concatStr = foldl (Data.String._++_) ""
+
   data World : Set where
     client : World
     server : World
+
+  _decW_ : (w : World) → (w' : World) → Dec (w ≡ w')
+  client decW client = yes refl
+  server decW server = yes refl
+  client decW server = no (λ ())
+  server decW client = no (λ ())
 
   postulate
     extensionality : ∀ {ℓ₁ ℓ₂} → Extensionality ℓ₁ ℓ₂

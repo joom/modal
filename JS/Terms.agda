@@ -4,7 +4,6 @@ module JS.Terms where
   open import Data.Float
   open import Data.Integer
   open import Data.Nat hiding (erase)
-  open import Data.String
   import Data.Unit
   open import Data.Maybe
   open import Data.Product
@@ -12,42 +11,50 @@ module JS.Terms where
   open import Relation.Binary.PropositionalEquality hiding ([_])
   open import Relation.Nullary
   open import Relation.Nullary.Decidable
-  open import Data.String
+  import Data.String
   open import Data.Nat.Show
-  open import Data.List hiding ([_]) renaming (_++_ to _+++_)
+  open import Data.List hiding ([_] ; zipWith) renaming (_++_ to _+++_)
+  open import Data.List.Any
+  open Membership-≡ using (_∈_; _⊆_)
+  open import Data.Vec hiding (_∈_)
+  open import Data.Fin
   open import Data.Empty
   open import Function
 
+  open import JS.Types
+
   open import Definitions
 
+  infixl 5 _⊢_
   mutual
-    data JS-Expr : Set where
-      JSBool : Bool → JS-Expr
-      JSNumber : (ℤ ⊎ Float) → JS-Expr
-      JSString : String → JS-Expr
-      JSVar : Id → JS-Expr
-      JSAbst : List Id → JS-Stm → JS-Expr
-      JSApp : List JS-Expr → JS-Expr → JS-Expr
+    data _⊢_ (Γ : Context) : Conc → Set where
+      -- Boolean values
+      `true  : ∀ {w} → Γ ⊢ `Bool < w >
+      `false : ∀ {w} → Γ ⊢ `Bool < w >
+      `_∧_ : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
+      `_∨_ : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
+      `¬_  : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
+      -- ℕ terms
+      `n_  : ∀ {w} → (ℤ ⊎ Float) → Γ ⊢ `Number < w >
+      `_≤_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Bool < w >
+      `_+_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Number < w >
+      `_*_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Number < w >
+      -- Abstraction & context terms
+      `v : ∀ {τ w} → (x : Id) → (x ⦂ τ < w >) ∈ⱼ Γ → Γ ⊢ τ < w >
+      `_·_ : ∀ {n typeVec τ w} → Γ ⊢ (`Function {n} typeVec τ) < w >
+           → (termVec : Vec (Σ Type (λ σ → Γ ⊢ σ < w >)) n)
+           → (Data.Vec.map proj₁ termVec ≡ typeVec) → Γ ⊢ τ < w >
+      `λ_⇒_ : ∀ {n typeVec τ w} → (ids : Vec Id n) → (toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⊢ τ < w > → Γ ⊢ `Function {n} typeVec τ < w >
+      -- Object terms
+      `obj : ∀ {n w} → Vec (Id × Σ Type (λ σ → Γ ⊢ σ < w >)) n → Γ ⊢ `Object < w >
+      `proj : ∀ {τ w} → (o : Γ ⊢ `Object < w >) → (key : Id) → {!!} → Γ ⊢ τ < w >
 
-    data JS-Stm : Set where
-      JSExpStm : JS-Expr → JS-Stm
+    -- Since we will not use any global variables, this should be enough.
+    data Stm_<_> : Context → World → Set where
+      `exp : ∀ {Γ τ w} → Γ ⊢ τ < w > → Stm Γ < w >
 
-  data JS-Program : Set where
-    JS-Prog : List JS-Stm → JS-Program
-
-  mutual
-    renderStm : JS-Stm → String
-    renderStm (JSExpStm x) = render x ++ ";"
-
-    render : JS-Expr → String
-    render (JSBool true) = "true"
-    render (JSBool false) = "false"
-    render (JSNumber (inj₁ x)) = Data.Integer.show x
-    render (JSNumber (inj₂ x)) = Data.Float.show x
-    render (JSString x) = "\"" ++ x ++ "\""
-    render (JSVar x) = x
-    render (JSAbst x stm) = "(function (" ++ {!!} ++ ") {return "  ++ renderStm stm ++ ";})"
-    render (JSApp expr1 expr2) = render {!!} ++ "(" ++ render expr2 ++ ")"
-
-  renderProg : JS-Program → String
-  renderProg (JS-Prog l) = unlines (Data.List.map renderStm l)
+    data FnStm_⇓_⦂_<_> : Context → Context → Maybe Type → World → Set where
+      `var : ∀ {fr Γ τ w mσ} → (id : Id) → (t : (fr ∷ Γ) ⊢ τ < w >) → FnStm (fr ∷ Γ) ⇓ ({!!} ∷ Γ) ⦂ mσ < w >
+      `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → FnStm Γ ⇓ {!!} ⦂ mσ < w >
+      _；return : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
+      _；_ : ∀ {Γ Γ' Γ'' w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → FnStm Γ' ⇓ Γ'' ⦂ nothing < w > → FnStm Γ ⇓ Γ'' ⦂ nothing < w >

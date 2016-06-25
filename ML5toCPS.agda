@@ -164,13 +164,13 @@ module ML5toCPS where
     convertExpr' {s = s} K (`snd t) = convertExpr' {s = s} (λ {_}{s''} v → `let "x" `=snd v `in K {s' = there ∘ s''} (`v "x" (here refl))) t
 
 
-    -- Corollary
-    -- For some reason it was easier to prove the ones above.
-    convertExpr : ∀ {Γ τ w}
-                → (∀ {Γ'} {s' : (convertCtx Γ) ⊆ Γ'} → Γ' ⊢ₓ ↓ (convertType τ) < w > → Γ' ⊢ₓ ⋆< w >)
-                → Γ ⊢₅ τ < w >
-                → (convertCtx Γ) ⊢ₓ ⋆< w >
-    convertExpr K t = convertExpr' {s = id} (λ {Δ}{s'} → K {_}{s'}) t
+  -- Corollary
+  -- For some reason it was easier to prove the ones above.
+  convertExpr : ∀ {Γ τ w}
+              → (∀ {Γ'} {s' : (convertCtx Γ) ⊆ Γ'} → Γ' ⊢ₓ ↓ (convertType τ) < w > → Γ' ⊢ₓ ⋆< w >)
+              → Γ ⊢₅ τ < w >
+              → (convertCtx Γ) ⊢ₓ ⋆< w >
+  convertExpr K t = convertExpr' {s = id} (λ {Δ}{s'} → K {_}{s'}) t
 
-    convertValue : ∀ {Γ τ w} → Γ ⊢₅ ↓ τ < w > → (convertCtx Γ) ⊢ₓ ↓ (convertType τ) < w >
-    convertValue t = convertValue' {s = id} t
+  convertValue : ∀ {Γ τ w} → Γ ⊢₅ ↓ τ < w > → (convertCtx Γ) ⊢ₓ ↓ (convertType τ) < w >
+  convertValue t = convertValue' {s = id} t

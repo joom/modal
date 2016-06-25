@@ -19,12 +19,6 @@ module CPS.Types where
 
   open import Definitions
 
-  _decW_ : (w : World) → (w' : World) → Dec (w ≡ w')
-  client decW client = yes refl
-  server decW server = yes refl
-  client decW server = no (λ ())
-  server decW client = no (λ ())
-
   data Type : Set where
     `Nat `Bool `Unit `String : Type
     `_cont : Type → Type
