@@ -21,8 +21,9 @@ module JS.Types where
   open import Definitions
 
   data Type : Set where
-    `Undefined `Object `Bool `Number `String : Type
+    `Undefined `Bool `Number `String : Type
     `Function : ∀ {n} → Vec Type n → Type → Type
+    `Object : List (Id × Type) → Type
 
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value

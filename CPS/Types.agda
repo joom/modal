@@ -20,7 +20,7 @@ module CPS.Types where
   open import Definitions
 
   data Type : Set where
-    `Nat `Bool `Unit `String : Type
+    `Int `Bool `Unit `String : Type
     `_cont : Type → Type
     `_×_ `_⊎_ : Type → Type → Type
     `_at_ : Type → World → Type
@@ -40,7 +40,7 @@ module CPS.Types where
 
   data _mobile : Type → Set where
     `Boolᵐ : `Bool mobile
-    `Natᵐ : `Nat mobile
+    `Intᵐ : `Int mobile
     `Unitᵐ : `Unit mobile
     `Stringᵐ : `String mobile
     `_atᵐ_ : ∀ {A w} → (` A at w) mobile
@@ -116,7 +116,7 @@ module CPS.Types where
     ... | no q = no (q ∘ inj≡R)
 
     _dec_ : (τ σ : Type) → Dec (τ ≡ σ)
-    `Nat dec `Nat = yes refl
+    `Int dec `Int = yes refl
     `Bool dec `Bool = yes refl
     `Unit dec `Unit = yes refl
     `String dec `String = yes refl
@@ -133,18 +133,18 @@ module CPS.Types where
     `⌘ C dec `⌘ D = unFnDec C D `⌘ inj≡⌘
     `∀ C dec `∀ D = unFnDec C D `∀ inj≡∀
     `∃ C dec `∃ D = unFnDec C D `∃ inj≡∃
-    `Nat dec `Bool = no (λ ())
-    `Nat dec `Unit = no (λ ())
-    `Nat dec `String = no (λ ())
-    `Nat dec ` _ cont = no (λ ())
-    `Nat dec (` _ × _) = no (λ ())
-    `Nat dec (` _ ⊎ _) = no (λ ())
-    `Nat dec (` _ at _) = no (λ ())
-    `Nat dec ` _ addr = no (λ ())
-    `Nat dec `⌘ _ = no (λ ())
-    `Nat dec `∀ _ = no (λ ())
-    `Nat dec `∃ _ = no (λ ())
-    `Bool dec `Nat = no (λ ())
+    `Int dec `Bool = no (λ ())
+    `Int dec `Unit = no (λ ())
+    `Int dec `String = no (λ ())
+    `Int dec ` _ cont = no (λ ())
+    `Int dec (` _ × _) = no (λ ())
+    `Int dec (` _ ⊎ _) = no (λ ())
+    `Int dec (` _ at _) = no (λ ())
+    `Int dec ` _ addr = no (λ ())
+    `Int dec `⌘ _ = no (λ ())
+    `Int dec `∀ _ = no (λ ())
+    `Int dec `∃ _ = no (λ ())
+    `Bool dec `Int = no (λ ())
     `Bool dec `Unit = no (λ ())
     `Bool dec `String = no (λ ())
     `Bool dec ` y cont = no (λ ())
@@ -155,7 +155,7 @@ module CPS.Types where
     `Bool dec `⌘ _ = no (λ ())
     `Bool dec `∀ _ = no (λ ())
     `Bool dec `∃ _ = no (λ ())
-    `Unit dec `Nat = no (λ ())
+    `Unit dec `Int = no (λ ())
     `Unit dec `Bool = no (λ ())
     `Unit dec `String = no (λ ())
     `Unit dec ` _ cont = no (λ ())
@@ -166,7 +166,7 @@ module CPS.Types where
     `Unit dec `⌘ _ = no (λ ())
     `Unit dec `∀ _ = no (λ ())
     `Unit dec `∃ _ = no (λ ())
-    `String dec `Nat = no (λ ())
+    `String dec `Int = no (λ ())
     `String dec `Bool = no (λ ())
     `String dec `Unit = no (λ ())
     `String dec ` y cont = no (λ ())
@@ -177,7 +177,7 @@ module CPS.Types where
     `String dec `⌘ _ = no (λ ())
     `String dec `∀ _ = no (λ ())
     `String dec `∃ _ = no (λ ())
-    ` _ cont dec `Nat = no (λ ())
+    ` _ cont dec `Int = no (λ ())
     ` _ cont dec `Bool = no (λ ())
     ` _ cont dec `Unit = no (λ ())
     ` _ cont dec `String = no (λ ())
@@ -188,7 +188,7 @@ module CPS.Types where
     ` _ cont dec `⌘ _ = no (λ ())
     ` _ cont dec `∀ _ = no (λ ())
     ` _ cont dec `∃ _ = no (λ ())
-    (` _ × _) dec `Nat = no (λ ())
+    (` _ × _) dec `Int = no (λ ())
     (` _ × _) dec `Bool = no (λ ())
     (` _ × _) dec `Unit = no (λ ())
     (` _ × _) dec `String = no (λ ())
@@ -199,7 +199,7 @@ module CPS.Types where
     (` _ × _) dec `⌘ _ = no (λ ())
     (` _ × _) dec `∀ _ = no (λ ())
     (` _ × _) dec `∃ _ = no (λ ())
-    (` _ ⊎ _) dec `Nat = no (λ ())
+    (` _ ⊎ _) dec `Int = no (λ ())
     (` _ ⊎ _) dec `Bool = no (λ ())
     (` _ ⊎ _) dec `Unit = no (λ ())
     (` _ ⊎ _) dec `String = no (λ ())
@@ -210,7 +210,7 @@ module CPS.Types where
     (` _ ⊎ _) dec `⌘ _ = no (λ ())
     (` _ ⊎ _) dec `∀ _ = no (λ ())
     (` _ ⊎ _) dec `∃ _ = no (λ ())
-    (` _ at _) dec `Nat = no (λ ())
+    (` _ at _) dec `Int = no (λ ())
     (` _ at _) dec `Bool = no (λ ())
     (` _ at _) dec `Unit = no (λ ())
     (` _ at _) dec `String = no (λ ())
@@ -221,7 +221,7 @@ module CPS.Types where
     (` _ at _) dec `⌘ _ = no (λ ())
     (` _ at _) dec `∀ _ = no (λ ())
     (` _ at _) dec `∃ _ = no (λ ())
-    ` _ addr dec `Nat = no (λ ())
+    ` _ addr dec `Int = no (λ ())
     ` _ addr dec `Bool = no (λ ())
     ` _ addr dec `Unit = no (λ ())
     ` _ addr dec `String = no (λ ())
@@ -232,7 +232,7 @@ module CPS.Types where
     ` _ addr dec `⌘ _ = no (λ ())
     ` _ addr dec `∀ _ = no (λ ())
     ` _ addr dec `∃ _ = no (λ ())
-    `⌘ _ dec `Nat = no (λ ())
+    `⌘ _ dec `Int = no (λ ())
     `⌘ _ dec `Bool = no (λ ())
     `⌘ _ dec `Unit = no (λ ())
     `⌘ _ dec `String = no (λ ())
@@ -243,7 +243,7 @@ module CPS.Types where
     `⌘ _ dec ` _ addr = no (λ ())
     `⌘ _ dec `∀ _ = no (λ ())
     `⌘ _ dec `∃ _ = no (λ ())
-    `∀ _ dec `Nat = no (λ ())
+    `∀ _ dec `Int = no (λ ())
     `∀ _ dec `Bool = no (λ ())
     `∀ _ dec `Unit = no (λ ())
     `∀ _ dec `String = no (λ ())
@@ -254,7 +254,7 @@ module CPS.Types where
     `∀ _ dec ` _ addr = no (λ ())
     `∀ _ dec `⌘ _ = no (λ ())
     `∀ _ dec `∃ _ = no (λ ())
-    `∃ _ dec `Nat = no (λ ())
+    `∃ _ dec `Int = no (λ ())
     `∃ _ dec `Bool = no (λ ())
     `∃ _ dec `Unit = no (λ ())
     `∃ _ dec `String = no (λ ())

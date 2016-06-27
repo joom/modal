@@ -25,7 +25,7 @@ module ML5toCPS where
   open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
 
   convertType : Type₅ → Typeₓ
-  convertType `Nat = `Nat
+  convertType `Int = `Int
   convertType `Bool = `Bool
   convertType `Unit = `Unit
   convertType `String = `String
@@ -81,7 +81,7 @@ module ML5toCPS where
 
   convertMobile : ∀ {τ} → ML5.Types._mobile τ → CPS.Types._mobile (convertType τ)
   convertMobile `Boolᵐ = `Boolᵐ
-  convertMobile `Natᵐ = `Natᵐ
+  convertMobile `Intᵐ = `Intᵐ
   convertMobile `Unitᵐ = `Unitᵐ
   convertMobile `Stringᵐ = `Stringᵐ
   convertMobile `_atᵐ_ = `_atᵐ_
@@ -149,12 +149,12 @@ module ML5toCPS where
     convertExpr' {s = s} K `localhost = `let "x" `=localhost`in K {s' = there} (`v "x" (here refl))
     convertExpr' {s = s} K (`val t) = K {s' = id} (convertValue' {s = s} t)
     convertExpr' {w = w}{s = s} K (`get {w' = w'}{m = m} a t) =
-      convertExpr' {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
-                          ((`put_`=_`in_ {m = _addrᵐ} "ur" (`v "x" (here refl))
-                            (`go[ w' , ⊆-term-lemma (there ∘ there) vₐ ] (convertExpr' {s = there ∘ there ∘ s' ∘ s}
-                                                (λ {_}{s''} v → `put_`=_`in_ {m = convertMobile m} "u" v
-                                                       (`go[ w , `vval "ur" (there (s'' (here refl))) ]
-                                                       K {s' = there ∘ s'' ∘ there ∘ there ∘ s'} (`vval "u" (here refl)))) t))))) a
+        convertExpr' {s = s} (λ {_}{s'} vₐ → `let "x" `=localhost`in
+                            ((`put_`=_`in_ {m = _addrᵐ} "ur" (`v "x" (here refl))
+                              (`go[ w' , ⊆-term-lemma (there ∘ there) vₐ ] (convertExpr' {s = there ∘ there ∘ s' ∘ s}
+                                                  (λ {_}{s''} v → `put_`=_`in_ {m = convertMobile m} "u" v
+                                                         (`go[ w , `vval "ur" (there (s'' (here refl))) ]
+                                                         K {s' = there ∘ s'' ∘ there ∘ there ∘ s'} (`vval "u" (here refl)))) t))))) a
     convertExpr' {s = s} K (`put {m = m} u t n) =
       convertExpr' {s = s} (λ {_}{s'} v →
         `put_`=_`in_ {m = convertMobile m} u v (convertExpr' {s = sub-lemma (s' ∘ s)} (λ {Γ''}{s''} → K {Γ''}{s'' ∘ there ∘ s'}) n)) t

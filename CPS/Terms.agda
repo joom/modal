@@ -10,7 +10,7 @@ module CPS.Terms where
   open import Relation.Nullary
   open import Relation.Nullary.Decidable
   import Data.String
-  open import Data.Nat.Show
+  open import Data.Integer
   open import Data.List hiding ([_])
   open import Data.List.Any
   open Membership-≡ using (_∈_; _⊆_)
@@ -37,10 +37,10 @@ module CPS.Terms where
     `_∨_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     `¬_  : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ↓ `Bool < w >
     -- ℕ values
-    `n_  : ∀ {w} → ℕ → Γ ⊢ ↓ `Nat < w >
-    `_≤_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Bool < w >
-    `_+_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w >
-    `_*_ : ∀ {w} → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w > → Γ ⊢ ↓ `Nat < w >
+    `n_  : ∀ {w} → ℤ → Γ ⊢ ↓ `Int < w >
+    `_≤_ : ∀ {w} → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Bool < w >
+    `_+_ : ∀ {w} → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Int < w >
+    `_*_ : ∀ {w} → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Int < w > → Γ ⊢ ↓ `Int < w >
     -- Abstraction & context values
     `v : ∀ {τ w} → (x : Id) → x ⦂ τ < w > ∈ Γ → Γ ⊢ ↓ τ < w >
     `vval : ∀ {w C} → (u : Id) → u ∼ C ∈ Γ → Γ ⊢ ↓ C w < w >

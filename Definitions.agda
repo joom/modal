@@ -11,7 +11,8 @@ module Definitions where
   open import Relation.Nullary.Decidable
   open import Data.String
   open import Data.Nat.Show
-  open import Data.List hiding ([_])
+  open import Data.List
+  open import Data.Vec
   open import Data.Empty
   open import Function
 
@@ -26,7 +27,10 @@ module Definitions where
   Id = Data.String.String
 
   concatStr : List String → String
-  concatStr = foldl (Data.String._++_) ""
+  concatStr = Data.List.foldl Data.String._++_ ""
+
+  concatVec : ∀ {n} → Vec String n → String
+  concatVec = Data.Vec.foldl _ Data.String._++_ ""
 
   data World : Set where
     client : World

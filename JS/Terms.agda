@@ -11,11 +11,11 @@ module JS.Terms where
   open import Relation.Binary.PropositionalEquality hiding ([_])
   open import Relation.Nullary
   open import Relation.Nullary.Decidable
-  import Data.String
+  open import Data.String
   open import Data.Nat.Show
   open import Data.List hiding ([_] ; zipWith) renaming (_++_ to _+++_)
   open import Data.List.Any
-  open Membership-≡ using (_∈_; _⊆_)
+  open Membership-≡
   open import Data.Vec hiding (_∈_)
   open import Data.Fin
   open import Data.Empty
@@ -25,9 +25,16 @@ module JS.Terms where
 
   open import Definitions
 
+  data Prim : Hyp → Set where
+    -- `alert : Prim ("alert" ⦂ `Function {!!} `Undefined < client >)
+    -- `version : Prim ("version" ⦂ `String < server >)
+    -- `log : Prim ("log" ∼ (λ _ → `Function ? `Undefined))
+
   infixl 5 _⊢_
   mutual
     data _⊢_ (Γ : Context) : Conc → Set where
+      `string : ∀ {w} → String → Γ ⊢ `String < w >
+      `undefined : ∀ {w} → Γ ⊢ `Undefined < w >
       -- Boolean values
       `true  : ∀ {w} → Γ ⊢ `Bool < w >
       `false : ∀ {w} → Γ ⊢ `Bool < w >
@@ -44,17 +51,21 @@ module JS.Terms where
       `_·_ : ∀ {n typeVec τ w} → Γ ⊢ (`Function {n} typeVec τ) < w >
            → (termVec : Vec (Σ Type (λ σ → Γ ⊢ σ < w >)) n)
            → (Data.Vec.map proj₁ termVec ≡ typeVec) → Γ ⊢ τ < w >
-      `λ_⇒_ : ∀ {n typeVec τ w} → (ids : Vec Id n) → (toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⊢ τ < w > → Γ ⊢ `Function {n} typeVec τ < w >
+      -- `λ_⇒_ : ∀ {n typeVec τ w} → (ids : Vec Id n) → (toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⊢ τ < w > → Γ ⊢ `Function {n} typeVec τ < w >
+      `λ_⇒_ : ∀ {n typeVec τ w fr} → (ids : Vec Id n)
+             → FnStm (Data.Vec.toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⇓ fr ∷ Γ ⦂ (just τ) < w >
+             → Γ ⊢ `Function {n} typeVec τ < w >
       -- Object terms
-      `obj : ∀ {n w} → Vec (Id × Σ Type (λ σ → Γ ⊢ σ < w >)) n → Γ ⊢ `Object < w >
-      `proj : ∀ {τ w} → (o : Γ ⊢ `Object < w >) → (key : Id) → {!!} → Γ ⊢ τ < w >
+      `obj : ∀ {w} → (terms : List (Id × Σ Type (λ σ → Γ ⊢ σ < w >))) → Γ ⊢ `Object (Data.List.map (λ { (id , τ , ω) → (id , τ)}) terms) < w >
+      `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
 
     -- Since we will not use any global variables, this should be enough.
     data Stm_<_> : Context → World → Set where
       `exp : ∀ {Γ τ w} → Γ ⊢ τ < w > → Stm Γ < w >
 
     data FnStm_⇓_⦂_<_> : Context → Context → Maybe Type → World → Set where
-      `var : ∀ {fr Γ τ w mσ} → (id : Id) → (t : (fr ∷ Γ) ⊢ τ < w >) → FnStm (fr ∷ Γ) ⇓ ({!!} ∷ Γ) ⦂ mσ < w >
-      `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → FnStm Γ ⇓ {!!} ⦂ mσ < w >
-      _；return : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
+      `var : ∀ {fr Γ τ w mσ} → (id : Id) → (t : (fr ∷ Γ) ⊢ τ < w >) → id ⦂ τ < w > ∉ fr → FnStm (fr ∷ Γ) ⇓ ((id ⦂ τ < w > ∷ fr) ∷ Γ) ⦂ mσ < w >
+      `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ⱼ Γ → FnStm Γ ⇓ Γ ⦂ mσ < w >
+      _；return_ : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
       _；_ : ∀ {Γ Γ' Γ'' w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → FnStm Γ' ⇓ Γ'' ⦂ nothing < w > → FnStm Γ ⇓ Γ'' ⦂ nothing < w >
+      `prim : ∀ {fr Γ h mσ w} → (x : Prim h) → FnStm (fr ∷ Γ) ⇓ ((h ∷ fr) ∷ Γ) ⦂ mσ < w >
