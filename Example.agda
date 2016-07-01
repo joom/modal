@@ -27,9 +27,22 @@ module Example where
   logVersion : [] ⊢₅ `Unit < client >
   logVersion =
     `prim `version `in
-    (`prim `log `in
+    `prim `log `in
     (` `val (`vval "log" (here refl))
-     · `get {m = `Stringᵐ} (`val `any) (`val (`v "version" (there (here refl))))))
+     · `get {m = `Stringᵐ} (`val `any) (`val (`v "version" (there (here refl)))))
 
   logVersionCPS : [] ⊢ₓ ⋆< client >
   logVersionCPS = convertExpr (λ v → `halt) logVersion
+
+  file : [] ⊢₅ `Unit < client >
+  file =
+    `prim `prompt `in
+    `prim `readFile `in
+    `prim `alert `in
+    (` `val (`v "alert" (here refl))
+     · `get {m = `Stringᵐ} (`val `any) (` `val (`v "readFile" (there (here refl)))
+                                        · `get {m = `Stringᵐ}(`val `any) (` `val (`v "prompt" (there (there (here refl))))
+                                                                          · `val (`string "Enter file name"))))
+
+  fileCPS : [] ⊢ₓ ⋆< client >
+  fileCPS = convertExpr (λ v → `halt) file

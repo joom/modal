@@ -34,34 +34,43 @@ module CPStoJS where
   convertType ` τ cont = `Function [ convertType τ ] `Undefined
   convertType (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType τ ) ∷ ("snd" , convertType σ) ∷ [])
   convertType (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType τ) ∷ ("inr" , convertType σ) ∷ [])
-  convertType (` τ at w) = `Object (("type" , `String) ∷ [])
-  convertType ` x addr = `Object {!!}
+  convertType (` τ at w) = convertType τ
+  convertType ` x addr = `Object (("type" , `String) ∷ [])
   convertType (`⌘ x) = {!!}
   convertType (`∀ x) = {!!}
   convertType (`∃ x) = {!!}
 
+  convertHyp : Hypₓ → Hypⱼ
+  convertHyp h = {!!}
+
   convertCtx : Contextₓ → Contextⱼ
   convertCtx = {!!}
 
+  convertPrim : ∀ {h} → CPS.Terms.Prim h → JS.Terms.Prim (convertHyp h)
+  convertPrim p = {!!}
 
-  convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → Stm (convertCtx Γ) < w >
-  convertCont (`if t `then t₁ `else t₂) = {!!}
-  convertCont (`letcase x , y `= t `in t₁ `or t₂) = {!!}
-  convertCont (`leta x `= t `in t₁) = {!!}
-  convertCont (`lets u `= t `in t₁) = {!!}
-  convertCont (`put u `= t `in t₁) = {!!}
-  convertCont (`let x `=fst t `in t₁) = {!!}
-  convertCont (`let x `=snd t `in t₁) = {!!}
-  convertCont (`let x `=localhost`in t) = {!!}
-  convertCont (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
-  convertCont (`let_=`unpack_`=_`in_ x t x₁) = {!!}
-  convertCont (`go[ w' , t ] t₁) = {!!}
-  convertCont (`call t t₁) = {!!}
-  convertCont `halt = {!!}
-  convertCont (`prim x `in t) = {!!}
+  convertCont : ∀ {Γ Δ Δ' Φ Φ' w} → Γ ⊢ₓ ⋆< w > → (current : World) → FnStm Δ ⇓ Δ' ⦂ {!!} < client > × FnStm Φ ⇓ Φ' ⦂ {!!} < server >
+  convertCont = {!!}
+
+  -- convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → FnStm {!!} ⇓ {!!} ⦂ {!!} < w >
+  -- convertCont (`if t `then t₁ `else t₂) = {!!}
+  -- convertCont (`letcase x , y `= t `in t₁ `or t₂) = {!!}
+  -- convertCont (`leta x `= t `in t₁) = {!!}
+  -- convertCont (`lets u `= t `in t₁) = {!!}
+  -- convertCont (`put u `= t `in t₁) = {!!}
+  -- convertCont (`let x `=fst t `in t₁) = {!!}
+  -- convertCont (`let x `=snd t `in t₁) = {!!}
+  -- convertCont (`let x `=localhost`in t) = {!!}
+  -- convertCont (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
+  -- convertCont (`let_=`unpack_`=_`in_ x t x₁) = {!!}
+  -- convertCont (`go[ w' , t ] t₁) = {!!}
+  -- convertCont (`call t t₁) = {!!}
+  -- convertCont `halt = {!!}
+  -- convertCont (`prim x `in t) = {!!}
 
   convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ⱼ (convertType τ) < w >
   convertValue `tt = `obj (("type" , `String , `string "unit") ∷ [])
+  convertValue (`string s) = `string s
   convertValue `true = `true
   convertValue `false = `false
   convertValue (` t ∧ u) = ` (convertValue t) ∧ (convertValue u)
@@ -74,16 +83,22 @@ module CPStoJS where
   convertValue (`v id ∈) = `v id {!!}
   convertValue (`vval u x) = {!!}
   convertValue (`λ x ⦂ σ ⇒ t) = {!!}
-  convertValue (` t , t₁) = {!!}
-  convertValue (`inl t `as σ) = {!!}
-  convertValue (`inr t `as τ) = {!!}
+  convertValue (` t , u) = `obj (("type" , `String , `string "and") ∷
+                                  ("fst" , _ , convertValue t) ∷ ("snd" , _ , convertValue u) ∷ [])
+  convertValue (`inl t `as σ) = `obj (("type" , `String , `string "or") ∷
+                                       ("dir" , `String , `string "inl") ∷
+                                       ("inl" , _ , convertValue t) ∷ ("inr" , _ , default (convertType σ)) ∷ [])
+  convertValue (`inr t `as τ) = `obj (("type" , `String , `string "or") ∷
+                                       ("dir" , `String , `string "inr") ∷
+                                       ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , convertValue t) ∷ [])
   convertValue (`hold t) = {!!}
   convertValue (`sham x) = {!!}
   convertValue (`Λ x) = {!!}
   convertValue (`pack ω t) = {!!}
-  convertValue `any = {!!}
+  convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
 
   entryPoint : [] ⊢ₓ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
-  entryPoint t =
-      (`exp ((` `λ [] ⇒ ({!!} ；return `undefined) · []) refl))
-    , (`exp ((` `λ [] ⇒ ({!!} ；return `undefined) · []) refl))
+  entryPoint t with convertCont t client
+  ... | a , b =
+      (`exp ((` `λ [] ⇒ (a ；return `undefined) · []) refl))
+    , (`exp ((` `λ [] ⇒ (b ；return `undefined) · []) refl))

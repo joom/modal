@@ -60,6 +60,7 @@ module JS.Source where
     primSource ()
 
     fnStmSource : ∀ {Γ Γ' mσ w} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → String
+    fnStmSource (`exp x) = termSource x ++ ";"
     fnStmSource (`var id t x) = "var " ++ id ++ " = " ++ termSource t
     fnStmSource (`assign id t x) = id ++ " = " ++ termSource t
     fnStmSource (s ；return x) = fnStmSource s ++ ";\nreturn " ++ termSource x ++ ";"

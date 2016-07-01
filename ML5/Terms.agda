@@ -25,11 +25,14 @@ module ML5.Terms where
     `alert : Prim ("alert" ⦂ ` `String ⇒ `Unit  < client >)
     `version : Prim ("version" ⦂ `String < server > )
     `log : Prim ("log" ∼ (λ _ → ` `String ⇒ `Unit))
+    `prompt : Prim ("prompt" ⦂ ` `String ⇒ `String < client >)
+    `readFile : Prim ("readFile" ⦂ ` `String ⇒ `String < server >)
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
   data _⊢_ (Γ : Context) : Conc → Set where
     `tt : ∀ {w} → Γ ⊢ ↓ `Unit < w >
+    `string : ∀ {w} → Data.String.String → Γ ⊢ ↓ `String < w >
     -- Boolean terms
     `true  : ∀ {w} → Γ ⊢ ↓ `Bool < w >
     `false : ∀ {w} → Γ ⊢ ↓ `Bool < w >

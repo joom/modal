@@ -32,6 +32,9 @@ module Definitions where
   concatVec : ∀ {n} → Vec String n → String
   concatVec = Data.Vec.foldl _ Data.String._++_ ""
 
+  underscorePrefix : String → String
+  underscorePrefix s = Data.String._++_ "_" s
+
   data World : Set where
     client : World
     server : World
@@ -48,3 +51,6 @@ module Definitions where
   cong₃ : ∀ {a b c d} {A : Set a} {B : Set b} {C : Set c} {D : Set d}
           (f : A → B → C → D) {x y u v a b} → x ≡ y → u ≡ v → a ≡ b → f x u a ≡ f y v b
   cong₃ f refl refl refl = refl
+
+  eq-replace : ∀ {a}{A B : Set a} → A ≡ B → A → B
+  eq-replace refl x = x

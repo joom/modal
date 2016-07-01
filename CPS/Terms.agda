@@ -25,11 +25,14 @@ module CPS.Terms where
     `alert : Prim ("alert" ⦂ ` ` `String × ` `Unit cont cont < client >)
     `version : Prim ("version" ⦂ `String < server > )
     `log : Prim ("log" ∼ (λ ω → ` ` `String × ` `Unit cont cont))
+    `prompt : Prim ("prompt" ⦂ ` ` `String × ` `String cont cont < client >)
+    `readFile : Prim ("readFile" ⦂ ` ` `String × ` `String cont cont < server >)
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
   data _⊢_ (Γ : Context) : Conc → Set where
     `tt : ∀ {w} → Γ ⊢ ↓ `Unit < w >
+    `string : ∀ {w} → Data.String.String → Γ ⊢ ↓ `String < w >
     -- Boolean values
     `true  : ∀ {w} → Γ ⊢ ↓ `Bool < w >
     `false : ∀ {w} → Γ ⊢ ↓ `Bool < w >
