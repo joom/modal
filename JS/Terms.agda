@@ -27,9 +27,11 @@ module JS.Terms where
   open import Definitions
 
   data Prim : Hyp → Set where
-    -- `alert : Prim ("alert" ⦂ `Function {!!} `Undefined < client >)
-    -- `version : Prim ("version" ⦂ `String < server >)
-    -- `log : Prim ("log" ∼ (λ _ → `Function ? `Undefined))
+    `alert : Prim (("alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >))
+    `version : Prim ("version" ⦂ `String < server >)
+    `log : Prim ("log" ∼ (λ ω → `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined))
+    `prompt : Prim ("prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client >)
+    `readFile : Prim ("readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server >)
 
   infixl 5 _⊢_
   mutual

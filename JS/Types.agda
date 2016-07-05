@@ -37,3 +37,9 @@ module JS.Types where
 
   _∈ⱼ_ : Hyp → Context → Set
   h ∈ⱼ Γ = Data.List.Any.Any (Membership-≡._∈_ h) Γ
+
+  _⊆ⱼ_ : Context → Context → Set
+  [] ⊆ⱼ [] = Data.Unit.⊤
+  [] ⊆ⱼ _ = ⊥
+  _ ⊆ⱼ [] = ⊥
+  (x ∷ xs) ⊆ⱼ (y ∷ ys) = (x ⊆ y) × (xs ≡ ys)

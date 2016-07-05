@@ -21,10 +21,18 @@ module CPStoJS where
 
   open import Definitions
 
-  open import CPS.Types renaming (Type to Typeₓ ; Hyp to Hypₓ ; Context to Contextₓ)
+  open import CPS.Types renaming (Type to Typeₓ ; Hyp to Hypₓ ; Conc to Concₓ ; Context to Contextₓ)
   open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
-  open import JS.Types renaming (Type to Typeⱼ ; Hyp to Hypⱼ ; Context to Contextⱼ)
+  open import JS.Types renaming (Type to Typeⱼ ; Hyp to Hypⱼ ; Conc to Concⱼ ; Context to Contextⱼ)
   open import JS.Terms renaming (_⊢_ to _⊢ⱼ_)
+
+  isValue : Concₓ → Set
+  isValue ⋆< _ > = ⊥
+  isValue ↓ _ < _ > = Data.Unit.⊤
+
+  isCont : Concₓ → Set
+  isCont ⋆< _ > = Data.Unit.⊤
+  isCont ↓ _ < _ > = ⊥
 
   convertType : Typeₓ → Typeⱼ
   convertType `Int = `Number
@@ -36,21 +44,48 @@ module CPStoJS where
   convertType (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType τ) ∷ ("inr" , convertType σ) ∷ [])
   convertType (` τ at w) = convertType τ
   convertType ` x addr = `Object (("type" , `String) ∷ [])
-  convertType (`⌘ x) = {!!}
-  convertType (`∀ x) = {!!}
-  convertType (`∃ x) = {!!}
+  convertType (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
+  convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
+  convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
+
+  worldForType : Typeₓ → World → World
+  worldForType (` τ at w) _ = w
+  worldForType _ w = w
 
   convertHyp : Hypₓ → Hypⱼ
-  convertHyp h = {!!}
+  convertHyp (x ⦂ τ < w >) = x ⦂ convertType τ < worldForType τ w >
+  convertHyp (u ∼ x) = u ∼ (λ ω → convertType (x ω))
 
   convertCtx : Contextₓ → Contextⱼ
-  convertCtx = {!!}
+  convertCtx xs = {!!}
 
   convertPrim : ∀ {h} → CPS.Terms.Prim h → JS.Terms.Prim (convertHyp h)
-  convertPrim p = {!!}
+  convertPrim `alert = `alert
+  convertPrim `version = `version
+  convertPrim `log = `log
+  convertPrim `prompt = `prompt
+  convertPrim `readFile = `readFile
 
-  convertCont : ∀ {Γ Δ Δ' Φ Φ' w} → Γ ⊢ₓ ⋆< w > → (current : World) → FnStm Δ ⇓ Δ' ⦂ {!!} < client > × FnStm Φ ⇓ Φ' ⦂ {!!} < server >
-  convertCont = {!!}
+  convertCont : ∀ {Γ Δ Δ' Φ Φ' w}
+              → {s : Δ ⊆ⱼ Δ'} {s' : Φ ⊆ⱼ Φ'}
+              → Γ ⊢ₓ ⋆< w >
+              → (current : World)
+              → FnStm Δ ⇓ Δ' ⦂ {!!} < client > × FnStm Φ ⇓ Φ' ⦂ {!!} < server >
+  convertCont (`if t `then t₁ `else t₂) current = {!!}
+  convertCont (`letcase x , y `= t `in t₁ `or t₂) current = {!!}
+  convertCont (`leta x `= t `in t₁) current = {!!}
+  convertCont (`lets u `= t `in t₁) current = {!!}
+  convertCont (`put u `= t `in t₁) current = {!!}
+  convertCont (`let x `=fst t `in t₁) current = {!!}
+  convertCont (`let x `=snd t `in t₁) current = {!!}
+  convertCont (`let x `=localhost`in t) current = {!!}
+  convertCont (`let x `= t ⟨ w' ⟩`in t₁) current = {!!}
+  convertCont (`let_=`unpack_`=_`in_ x t x₁) current = {!!}
+  convertCont (`go[ w' , t ] t₁) current = {!!}
+  convertCont (`call t t₁) current = {!!}
+  convertCont `halt client = {!`exp `undefined ；return ?!} , {!`exp `undefined!}
+  convertCont `halt server = {!`exp `undefined!} , {!`exp `undefined ；return ?!}
+  convertCont (`prim x `in t) current = {!!}
 
   -- convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → FnStm {!!} ⇓ {!!} ⦂ {!!} < w >
   -- convertCont (`if t `then t₁ `else t₂) = {!!}
