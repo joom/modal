@@ -39,6 +39,7 @@ module JS.Types where
   h ∈ⱼ Γ = Data.List.Any.Any (Membership-≡._∈_ h) Γ
 
   _⊆ⱼ_ : Context → Context → Set
+  --  Γ ⊆ⱼ Δ = {!Data.List.Any.Any ? Γ!}
   [] ⊆ⱼ [] = Data.Unit.⊤
   [] ⊆ⱼ _ = ⊥
   _ ⊆ⱼ [] = ⊥

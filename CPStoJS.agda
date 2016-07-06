@@ -66,74 +66,77 @@ module CPStoJS where
   convertPrim `prompt = `prompt
   convertPrim `readFile = `readFile
 
-  convertCont : ∀ {Γ Δ Δ' Φ Φ' w}
-              → {s : Δ ⊆ⱼ Δ'} {s' : Φ ⊆ⱼ Φ'}
-              → Γ ⊢ₓ ⋆< w >
-              → (current : World)
-              → FnStm Δ ⇓ Δ' ⦂ {!!} < client > × FnStm Φ ⇓ Φ' ⦂ {!!} < server >
-  convertCont (`if t `then t₁ `else t₂) current = {!!}
-  convertCont (`letcase x , y `= t `in t₁ `or t₂) current = {!!}
-  convertCont (`leta x `= t `in t₁) current = {!!}
-  convertCont (`lets u `= t `in t₁) current = {!!}
-  convertCont (`put u `= t `in t₁) current = {!!}
-  convertCont (`let x `=fst t `in t₁) current = {!!}
-  convertCont (`let x `=snd t `in t₁) current = {!!}
-  convertCont (`let x `=localhost`in t) current = {!!}
-  convertCont (`let x `= t ⟨ w' ⟩`in t₁) current = {!!}
-  convertCont (`let_=`unpack_`=_`in_ x t x₁) current = {!!}
-  convertCont (`go[ w' , t ] t₁) current = {!!}
-  convertCont (`call t t₁) current = {!!}
-  convertCont `halt client = {!`exp `undefined ；return ?!} , {!`exp `undefined!}
-  convertCont `halt server = {!`exp `undefined!} , {!`exp `undefined ；return ?!}
-  convertCont (`prim x `in t) current = {!!}
+  mutual
+    convertCont : ∀ {Γ Δ Δ' Φ Φ' mσ}
+                → {s : Δ ⊆ⱼ Δ'} {s' : Φ ⊆ⱼ Φ'}
+                → (w : World)
+                → Γ ⊢ₓ ⋆< w >
+                → FnStm Δ ⇓ Δ' ⦂ mσ < client > × FnStm Φ ⇓ Φ' ⦂ mσ < server >
+    convertCont {s = s} {s' = s'} client (`if t `then u `else v)
+      with convertCont {s = s} {s' = s'} client u | convertCont {s = {!s!}} {s' = {!!}} client v
+    ... | a , b | c , d = (`if {!convertValue t!} `then a `else c) , (b ； d)
+    convertCont server (`if t `then u `else v) = {!!}
+    convertCont w (`letcase x , y `= t `in t₁ `or t₂) = {!!}
+    convertCont w (`leta x `= t `in t₁) = {!!}
+    convertCont w (`lets u `= t `in t₁) = {!!}
+    convertCont w (`put u `= t `in t₁) = {!!}
+    convertCont w (`let x `=fst t `in t₁) = {!!}
+    convertCont w (`let x `=snd t `in t₁) = {!!}
+    convertCont w (`let x `=localhost`in t) = {!!}
+    convertCont w (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
+    convertCont w (`let_=`unpack_`=_`in_ x t x₁) = {!!}
+    convertCont w (`go[ w' , t ] t₁) = {!!}
+    convertCont w (`call t t₁) = {!!}
+    convertCont w `halt = {!!}
+    convertCont {s = s} {s' = s'} client (`prim x `in t)
+      with convertCont {s = {!!}} {s' = s'} client t
+    ... | a , b = {!`prim (convertPrim x) ； a!} , b
+    convertCont server (`prim x `in t) = {!!}
 
-  -- convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → FnStm {!!} ⇓ {!!} ⦂ {!!} < w >
-  -- convertCont (`if t `then t₁ `else t₂) = {!!}
-  -- convertCont (`letcase x , y `= t `in t₁ `or t₂) = {!!}
-  -- convertCont (`leta x `= t `in t₁) = {!!}
-  -- convertCont (`lets u `= t `in t₁) = {!!}
-  -- convertCont (`put u `= t `in t₁) = {!!}
-  -- convertCont (`let x `=fst t `in t₁) = {!!}
-  -- convertCont (`let x `=snd t `in t₁) = {!!}
-  -- convertCont (`let x `=localhost`in t) = {!!}
-  -- convertCont (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
-  -- convertCont (`let_=`unpack_`=_`in_ x t x₁) = {!!}
-  -- convertCont (`go[ w' , t ] t₁) = {!!}
-  -- convertCont (`call t t₁) = {!!}
-  -- convertCont `halt = {!!}
-  -- convertCont (`prim x `in t) = {!!}
+    -- convertCont {s = s} {s' = s'} (`if t `then u `else v) client
+    --   with convertCont {s = s} {s' = s'} u client | convertCont {s = s} {s' = {!s'!}} v client
+    -- ... | a , b | c , d = (`if {!convertValue t!} `then a `else c) , (b ； d)
+    -- convertCont (`if t `then u `else v) server = {!!}
+    -- convertCont {mσ = mσ} `halt client = {!`exp `undefined ；return ?!} , {!`exp `undefined!}
+    -- convertCont `halt server = {!`exp `undefined!} , {!`exp `undefined ；return ?!}
+    -- convertCont {s = s} {s' = s'} (`prim x `in t) client
+    --   with convertCont {s = s} {s' = s'} t client
+    -- ... | a , b = {!`prim (convertPrim x) ； a!} , b
+    -- convertCont {s = s} {s' = s'} (`prim x `in t) server
+    -- with convertCont {s = s} {s' = s'} t server
+    -- ... | a , b = a , {!`prim (convertPrim x) ； b!}
 
-  convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ⱼ (convertType τ) < w >
-  convertValue `tt = `obj (("type" , `String , `string "unit") ∷ [])
-  convertValue (`string s) = `string s
-  convertValue `true = `true
-  convertValue `false = `false
-  convertValue (` t ∧ u) = ` (convertValue t) ∧ (convertValue u)
-  convertValue (` t ∨ u) = ` (convertValue t) ∨ (convertValue u)
-  convertValue (`¬ t) = `¬ (convertValue t)
-  convertValue (`n x) = `n inj₁ x
-  convertValue (` t ≤ u) =  ` (convertValue t) ≤ (convertValue u)
-  convertValue (` t + u) =  ` (convertValue t) + (convertValue u)
-  convertValue (` t * u) =  ` (convertValue t) * (convertValue u)
-  convertValue (`v id ∈) = `v id {!!}
-  convertValue (`vval u x) = {!!}
-  convertValue (`λ x ⦂ σ ⇒ t) = {!!}
-  convertValue (` t , u) = `obj (("type" , `String , `string "and") ∷
-                                  ("fst" , _ , convertValue t) ∷ ("snd" , _ , convertValue u) ∷ [])
-  convertValue (`inl t `as σ) = `obj (("type" , `String , `string "or") ∷
-                                       ("dir" , `String , `string "inl") ∷
-                                       ("inl" , _ , convertValue t) ∷ ("inr" , _ , default (convertType σ)) ∷ [])
-  convertValue (`inr t `as τ) = `obj (("type" , `String , `string "or") ∷
-                                       ("dir" , `String , `string "inr") ∷
-                                       ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , convertValue t) ∷ [])
-  convertValue (`hold t) = {!!}
-  convertValue (`sham x) = {!!}
-  convertValue (`Λ x) = {!!}
-  convertValue (`pack ω t) = {!!}
-  convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
+    convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ⱼ (convertType τ) < w >
+    convertValue `tt = `obj (("type" , `String , `string "unit") ∷ [])
+    convertValue (`string s) = `string s
+    convertValue `true = `true
+    convertValue `false = `false
+    convertValue (` t ∧ u) = ` (convertValue t) ∧ (convertValue u)
+    convertValue (` t ∨ u) = ` (convertValue t) ∨ (convertValue u)
+    convertValue (`¬ t) = `¬ (convertValue t)
+    convertValue (`n x) = `n inj₁ x
+    convertValue (` t ≤ u) =  ` (convertValue t) ≤ (convertValue u)
+    convertValue (` t + u) =  ` (convertValue t) + (convertValue u)
+    convertValue (` t * u) =  ` (convertValue t) * (convertValue u)
+    convertValue (`v id ∈) = `v id {!!}
+    convertValue (`vval u x) = {!!}
+    convertValue (`λ x ⦂ σ ⇒ t) = `λ x ∷ [] ⇒ {!convertCont ? ?!}
+    convertValue (` t , u) = `obj (("type" , `String , `string "and") ∷
+                                    ("fst" , _ , convertValue t) ∷ ("snd" , _ , convertValue u) ∷ [])
+    convertValue (`inl t `as σ) = `obj (("type" , `String , `string "or") ∷
+                                        ("dir" , `String , `string "inl") ∷
+                                        ("inl" , _ , convertValue t) ∷ ("inr" , _ , default (convertType σ)) ∷ [])
+    convertValue (`inr t `as τ) = `obj (("type" , `String , `string "or") ∷
+                                        ("dir" , `String , `string "inr") ∷
+                                        ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , convertValue t) ∷ [])
+    convertValue (`hold t) = {!!}
+    convertValue (`sham x) = {!!}
+    convertValue (`Λ x) = {!!}
+    convertValue (`pack ω t) = {!!}
+    convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
 
   entryPoint : [] ⊢ₓ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
-  entryPoint t with convertCont t client
+  entryPoint t with convertCont {s = {!!} , refl}{s' = {!!} , refl} client t
   ... | a , b =
-      (`exp ((` `λ [] ⇒ (a ；return `undefined) · []) refl))
-    , (`exp ((` `λ [] ⇒ (b ；return `undefined) · []) refl))
+      (`exp ((` `λ [] ⇒ (`prim `socket ； a ；return `undefined) · []) refl))
+    , (`exp ((` `λ [] ⇒ (`prim `io ； b ；return `undefined) · []) refl))

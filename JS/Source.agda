@@ -55,9 +55,18 @@ module JS.Source where
     stmSource : ∀ {Γ w} → Stm Γ < w > → String
     stmSource (`exp x) = termSource x ++ ";"
 
-    -- TODO update with primitives
     primSource : ∀ {h} → Prim h → String
-    primSource ()
+    primSource `alert = "var _alert = function(obj) {alert(obj.fst); obj.snd({\"type\" : \"unit\"});};"
+    primSource `version = "var _version = \"0.0.1\";"
+    primSource `log = "var _log = function(obj) {console.log(obj.fst); obj.snd({\"type\" : \"unit\"});};"
+    primSource `prompt = "var _prompt = function(obj) {obj.snd(prompt(obj.fst));};"
+    primSource `readFile = "var _readFile = function(obj) {require(\"fs\").readFile(obj.fst, \"utf-8\", function (err, data) {if(err) {throw err;} obj.snd(data);});}"
+    primSource `socket = "var _socket = io();"
+    primSource `io = "var app = require('express')();"
+                  ++ "var http = require('http').Server(app);"
+                  ++ "app.get('/', function(req, res) {res.sendFile(__dirname + '/index.html');});"
+                  ++ "http.listen(3000, function() {console.log('listening on *:3000');});"
+                  ++ "var _io = require('socket.io')(http);"
 
     fnStmSource : ∀ {Γ Γ' mσ w} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → String
     fnStmSource (`exp x) = termSource x ++ ";"
@@ -65,4 +74,5 @@ module JS.Source where
     fnStmSource (`assign id t x) = id ++ " = " ++ termSource t
     fnStmSource (s ；return x) = fnStmSource s ++ ";\nreturn " ++ termSource x ++ ";"
     fnStmSource (s₁ ； s₂) = fnStmSource s₁ ++ ";\n" ++ fnStmSource s₂
+    fnStmSource (`if b `then t `else u) = "if (" ++ termSource b ++ ") {" ++ fnStmSource t ++ "\n} then {" ++ fnStmSource u ++ "\n}"
     fnStmSource (`prim x) = primSource x

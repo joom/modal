@@ -27,13 +27,20 @@ module JS.Terms where
   open import Definitions
 
   data Prim : Hyp → Set where
-    `alert : Prim (("alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >))
+    `alert : Prim ("alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >)
     `version : Prim ("version" ⦂ `String < server >)
     `log : Prim ("log" ∼ (λ ω → `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined))
     `prompt : Prim ("prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client >)
     `readFile : Prim ("readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server >)
+    -- PRIMITIVES FOR WEB SOCKETS (not accessible in ML5 or CPS, only for compilation)
+    `socket : Prim ("socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
+                                       ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client >)
+    `io : Prim ("io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
+                               ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server >)
 
   infixl 5 _⊢_
+  infixl 4 _；_
+  infixl 4 _；return_
   mutual
     data _⊢_ (Γ : Context) : Conc → Set where
       `string : ∀ {w} → String → Γ ⊢ `String < w >
@@ -54,13 +61,11 @@ module JS.Terms where
       `_·_ : ∀ {n typeVec τ w} → Γ ⊢ (`Function {n} typeVec τ) < w >
            → (termVec : Vec (Σ Type (λ σ → Γ ⊢ σ < w >)) n)
            → (Data.Vec.map proj₁ termVec ≡ typeVec) → Γ ⊢ τ < w >
-      -- `λ_⇒_ : ∀ {n typeVec τ w} → (ids : Vec Id n) → (toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⊢ τ < w > → Γ ⊢ `Function {n} typeVec τ < w >
       `λ_⇒_ : ∀ {n typeVec τ w fr} → (ids : Vec Id n)
              → FnStm (Data.Vec.toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⇓ fr ∷ Γ ⦂ (just τ) < w >
              → Γ ⊢ `Function {n} typeVec τ < w >
       -- Object terms
       `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (Data.List.map toTypePair terms) < w >
-      --  `obj : ∀ {w} → (terms : List (Id × Σ Type (λ σ → Γ ⊢ σ < w >))) → Γ ⊢ `Object (Data.List.map (λ { (id , τ , ω) → (id , τ)}) terms) < w >
       `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
       -- Valid terms
       `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ⱼ Γ → Γ ⊢ C w < w >
@@ -74,7 +79,8 @@ module JS.Terms where
       `var : ∀ {fr Γ τ w mσ} → (id : Id) → (t : (fr ∷ Γ) ⊢ τ < w >) → id ⦂ τ < w > ∉ fr → FnStm (fr ∷ Γ) ⇓ ((id ⦂ τ < w > ∷ fr) ∷ Γ) ⦂ mσ < w >
       `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ⱼ Γ → FnStm Γ ⇓ Γ ⦂ mσ < w >
       _；return_ : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
-      _；_ : ∀ {Γ Γ' Γ'' w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → FnStm Γ' ⇓ Γ'' ⦂ nothing < w > → FnStm Γ ⇓ Γ'' ⦂ nothing < w >
+      _；_ : ∀ {Γ Γ' Γ'' w mσ} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ' ⇓ Γ'' ⦂ mσ < w > → FnStm Γ ⇓ Γ'' ⦂ mσ < w >
+      `if_`then_`else_ : ∀ {Γ Γ' w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w >
       `prim : ∀ {fr Γ h mσ w} → (x : Prim h) → FnStm (fr ∷ Γ) ⇓ ((h ∷ fr) ∷ Γ) ⦂ mσ < w >
 
     toTypePair : ∀ {Γ w} → Id × Σ Type (λ τ → Γ ⊢ τ < w >) → Id × Type
