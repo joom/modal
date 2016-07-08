@@ -57,31 +57,32 @@ module JS.Terms where
       `_+_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Number < w >
       `_*_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Number < w >
       -- Abstraction & context terms
-      `v : ∀ {τ w} → (x : Id) → (x ⦂ τ < w >) ∈ⱼ Γ → Γ ⊢ τ < w >
+      `v : ∀ {τ w} → (x : Id) → (x ⦂ τ < w >) ∈ Γ → Γ ⊢ τ < w >
       `_·_ : ∀ {n typeVec τ w} → Γ ⊢ (`Function {n} typeVec τ) < w >
            → (termVec : Vec (Σ Type (λ σ → Γ ⊢ σ < w >)) n)
            → (Data.Vec.map proj₁ termVec ≡ typeVec) → Γ ⊢ τ < w >
-      `λ_⇒_ : ∀ {n typeVec τ w fr} → (ids : Vec Id n)
-             → FnStm (Data.Vec.toList (zipWith (_⦂_< w >) ids typeVec) ∷ Γ) ⇓ fr ∷ Γ ⦂ (just τ) < w >
+      `λ_⇒_ : ∀ {n typeVec τ w Γ'} → (ids : Vec Id n)
+             → FnStm (Data.Vec.toList (zipWith (_⦂_< w >) ids typeVec) +++ Γ) ⇓ Γ' ⦂ (just τ) < w >
              → Γ ⊢ `Function {n} typeVec τ < w >
       -- Object terms
       `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (Data.List.map toTypePair terms) < w >
       `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
       -- Valid terms
-      `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ⱼ Γ → Γ ⊢ C w < w >
+      `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ Γ → Γ ⊢ C w < w >
 
     -- Since we will not use any global variables, this should be enough.
     data Stm_<_> : Context → World → Set where
       `exp : ∀ {Γ τ w} → Γ ⊢ τ < w > → Stm Γ < w >
 
     data FnStm_⇓_⦂_<_> : Context → Context → Maybe Type → World → Set where
+      `nop : ∀ {Γ w mσ} → FnStm Γ ⇓ Γ ⦂ mσ < w >
       `exp : ∀ {Γ τ w mσ} → Γ ⊢ τ < w > → FnStm Γ ⇓ Γ ⦂ mσ < w >
-      `var : ∀ {fr Γ τ w mσ} → (id : Id) → (t : (fr ∷ Γ) ⊢ τ < w >) → id ⦂ τ < w > ∉ fr → FnStm (fr ∷ Γ) ⇓ ((id ⦂ τ < w > ∷ fr) ∷ Γ) ⦂ mσ < w >
-      `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ⱼ Γ → FnStm Γ ⇓ Γ ⦂ mσ < w >
+      `var : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → id ⦂ τ < w > ∉ Γ → FnStm Γ ⇓ (id ⦂ τ < w > ∷ Γ) ⦂ mσ < w >
+      `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ Γ → FnStm Γ ⇓ Γ ⦂ mσ < w >
       _；return_ : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
       _；_ : ∀ {Γ Γ' Γ'' w mσ} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ' ⇓ Γ'' ⦂ mσ < w > → FnStm Γ ⇓ Γ'' ⦂ mσ < w >
       `if_`then_`else_ : ∀ {Γ Γ' w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ ⇓ Γ' ⦂ mσ < w >
-      `prim : ∀ {fr Γ h mσ w} → (x : Prim h) → FnStm (fr ∷ Γ) ⇓ ((h ∷ fr) ∷ Γ) ⦂ mσ < w >
+      `prim : ∀ {Γ h mσ w} → (x : Prim h) → FnStm Γ ⇓ (h ∷ Γ) ⦂ mσ < w >
 
     toTypePair : ∀ {Γ w} → Id × Σ Type (λ τ → Γ ⊢ τ < w >) → Id × Type
     toTypePair = λ { (id , τ , ω) → (id , τ)}

@@ -45,10 +45,10 @@ module Example where
     `exp ((` (`λ [] ⇒ (
       `prim `alert ；
       `prim `socket ；
-      `exp ((` `proj (`v "socket" (here (here refl))) "on" (here refl)
-             · ((_ , `string "version") ∷ ((_ , (`λ "v" ∷ [] ⇒ (`exp ((` `v "alert" (there (here (there (here refl))))
+      `exp ((` `proj (`v "socket" (here refl)) "on" (here refl)
+             · ((_ , `string "version") ∷ ((_ , (`λ "v" ∷ [] ⇒ (`exp ((` `v "alert" (there (there (here refl)))
                                                                         · ((_ , `obj (("type" , _ , `string "and") ∷
-                                                                                       ("fst" , _ , `v "v" (here (here refl))) ∷
+                                                                                       ("fst" , _ , `v "v" (here refl)) ∷
                                                                                        ("snd" , _ , (`λ "a" ∷ [] ⇒ (`exp `undefined ；return `undefined)))
                                                                                        ∷ [])) ∷ [])) refl) ；return `undefined))) ∷ []))) refl)
     ；return `undefined

@@ -57,7 +57,7 @@ module CPStoJS where
   convertHyp (u ∼ x) = u ∼ (λ ω → convertType (x ω))
 
   convertCtx : Contextₓ → Contextⱼ
-  convertCtx xs = {!!}
+  convertCtx = Data.List.map convertHyp
 
   convertPrim : ∀ {h} → CPS.Terms.Prim h → JS.Terms.Prim (convertHyp h)
   convertPrim `alert = `alert
@@ -68,7 +68,7 @@ module CPStoJS where
 
   mutual
     convertCont : ∀ {Γ Δ Δ' Φ Φ' mσ}
-                → {s : Δ ⊆ⱼ Δ'} {s' : Φ ⊆ⱼ Φ'}
+                → {s : Δ ⊆ Δ'} {s' : Φ ⊆ Φ'}
                 → (w : World)
                 → Γ ⊢ₓ ⋆< w >
                 → FnStm Δ ⇓ Δ' ⦂ mσ < client > × FnStm Φ ⇓ Φ' ⦂ mσ < server >
@@ -136,7 +136,7 @@ module CPStoJS where
     convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
 
   entryPoint : [] ⊢ₓ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
-  entryPoint t with convertCont {s = {!!} , refl}{s' = {!!} , refl} client t
+  entryPoint t with convertCont {s = {!!} }{s' = {!!}} client t
   ... | a , b =
       (`exp ((` `λ [] ⇒ (`prim `socket ； a ；return `undefined) · []) refl))
     , (`exp ((` `λ [] ⇒ (`prim `io ； b ；return `undefined) · []) refl))

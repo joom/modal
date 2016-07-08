@@ -33,14 +33,14 @@ module JS.Types where
     _<_> : (τ : Type) (w : World) → Conc -- Expression
     -- ↓_<_> : (τ : Type) (w : World) → Conc -- Value
 
-  Context = List (List Hyp)
+  Context = List Hyp
 
-  _∈ⱼ_ : Hyp → Context → Set
-  h ∈ⱼ Γ = Data.List.Any.Any (Membership-≡._∈_ h) Γ
+  -- _∈ⱼ_ : Hyp → Context → Set
+  -- h ∈ⱼ Γ = Data.List.Any.Any (Membership-≡._∈_ h) Γ
 
-  _⊆ⱼ_ : Context → Context → Set
-  --  Γ ⊆ⱼ Δ = {!Data.List.Any.Any ? Γ!}
-  [] ⊆ⱼ [] = Data.Unit.⊤
-  [] ⊆ⱼ _ = ⊥
-  _ ⊆ⱼ [] = ⊥
-  (x ∷ xs) ⊆ⱼ (y ∷ ys) = (x ⊆ y) × (xs ≡ ys)
+  -- _⊆ⱼ_ : Context → Context → Set
+  -- --  Γ ⊆ⱼ Δ = {!Data.List.Any.Any ? Γ!}
+  -- [] ⊆ⱼ [] = Data.Unit.⊤
+  -- [] ⊆ⱼ _ = ⊥
+  -- _ ⊆ⱼ [] = ⊥
+  -- (x ∷ xs) ⊆ⱼ (y ∷ ys) = (x ⊆ y) × (xs ≡ ys)

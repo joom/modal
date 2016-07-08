@@ -69,6 +69,7 @@ module JS.Source where
                   ++ "var _io = require('socket.io')(http);"
 
     fnStmSource : ∀ {Γ Γ' mσ w} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → String
+    fnStmSource `nop = ""
     fnStmSource (`exp x) = termSource x ++ ";"
     fnStmSource (`var id t x) = "var " ++ id ++ " = " ++ termSource t
     fnStmSource (`assign id t x) = id ++ " = " ++ termSource t
