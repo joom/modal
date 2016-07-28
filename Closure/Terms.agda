@@ -22,11 +22,11 @@ module Closure.Terms where
 
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
-    `alert : Prim ("alert" ⦂ ` ` `String × ` `Unit cont cont < client >)
+    `alert : Prim ("alert" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `Unit × β cont) × α cont) < client >)
     `version : Prim ("version" ⦂ `String < server > )
-    `log : Prim ("log" ∼ (λ ω → ` ` `String × ` `Unit cont cont))
-    `prompt : Prim ("prompt" ⦂ ` ` `String × ` `String cont cont < client >)
-    `readFile : Prim ("readFile" ⦂ ` ` `String × ` `String cont cont < server >)
+    `log : Prim ("log" ∼ (λ ω → `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `Unit × β cont) × α cont)))
+    `prompt : Prim ("prompt" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `String × β cont) × α cont) < client >)
+    `readFile : Prim ("readFile" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `String × β cont) × α cont) < server >)
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
@@ -92,3 +92,5 @@ module Closure.Terms where
   -- Weakening
   postulate
     ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
+ -- ⊆-term-lemma s t = {!!}
+    ⊆-cont-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Γ ⊢ ⋆< w > → Γ' ⊢ ⋆< w >
