@@ -59,22 +59,6 @@ module ML5toCPS where
   ⊆-∈-lemma : ∀ {h} {Γ Γ' : CPS.Types.Context} → Γ ⊆ Γ' → h ∈ Γ → h ∈ Γ'
   ⊆-∈-lemma sub i = sub i
 
-
-  -- If there are two things in the context with different names, their order doesn't matter.
-  -- We also included subsets to that proposition.
-  swap-lemma : ∀ {x y σ τ w w' Γ Γ'} {b : Hypₓ}
-             → x ≢ y
-             → b ∈ ((x ⦂ σ < w >) ∷ (y ⦂ τ < w' >) ∷ Γ)
-             → Γ ⊆ Γ'
-             → b ∈ ((y ⦂ τ < w' >) ∷ (x ⦂ σ < w >) ∷ Γ')
-  swap-lemma {x}{y}{σ}{τ}{w}{w'}{b = b} neq i s with b decHyp (x ⦂ σ < w >)
-  swap-lemma neq i s | yes refl = there (here refl)
-  swap-lemma {x}{y}{σ}{τ}{w}{w'}{b = b} neq i s | no q with b decHyp (y ⦂ τ < w' >)
-  swap-lemma neq i s | no q | yes refl = here refl
-  swap-lemma neq (here px) s | no q | no q' = ⊥-elim (q px)
-  swap-lemma neq (there (here px)) s | no q | no q' = ⊥-elim (q' px)
-  swap-lemma neq (there (there i)) s | no q | no q' = there (there (s i))
-
   sub-lemma : ∀ {Γ Δ} {h : Hypₓ} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
   sub-lemma {h = h} s {x} i with x decHyp h
   ... | yes p = here p
