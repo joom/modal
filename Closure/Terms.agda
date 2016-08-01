@@ -89,8 +89,54 @@ module Closure.Terms where
                            → ((x ⦂ C τ < w >) ∷ Γ) ⊢ ⋆< w >
                            → Γ ⊢ ⋆< w >
 
+  sub-lemma : ∀ {Γ Δ} {h : Hyp} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
+  sub-lemma {h = h} s {x} i with x decHyp h
+  ... | yes p = here p
+  sub-lemma s (here px) | no q = ⊥-elim (q px)
+  sub-lemma s (there i) | no q = there (s i)
+
   -- Weakening
-  postulate
-    ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
- -- ⊆-term-lemma s t = {!!}
+  mutual
     ⊆-cont-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Γ ⊢ ⋆< w > → Γ' ⊢ ⋆< w >
+    ⊆-cont-lemma s (`if t `then u `else v) = `if ⊆-term-lemma s t `then ⊆-cont-lemma s u `else ⊆-cont-lemma s v
+    ⊆-cont-lemma s (`letcase x , y `= t `in u `or v) =
+      `letcase x , y `= ⊆-term-lemma s t `in ⊆-cont-lemma (sub-lemma s) u `or ⊆-cont-lemma (sub-lemma s) v
+    ⊆-cont-lemma s (`leta x `= t `in u) = `leta x `= (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
+    ⊆-cont-lemma s (`lets u `= t `in v) = `lets u `= (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) v)
+    ⊆-cont-lemma s (`put_`=_`in_ {m = m} u t v) = `put_`=_`in_ {m = m} u (⊆-term-lemma s t) (⊆-cont-lemma (sub-lemma s) v)
+    ⊆-cont-lemma s (`let x `=fst t `in u) = `let x `=fst (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
+    ⊆-cont-lemma s (`let x `=snd t `in u) = `let x `=snd (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
+    ⊆-cont-lemma s (`let x `=localhost`in t) = `let x `=localhost`in (⊆-cont-lemma (sub-lemma s) t)
+    ⊆-cont-lemma s (`let x `= t ⟨ w' ⟩`in u) = `let x `= (⊆-term-lemma s t) ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma s) u
+    ⊆-cont-lemma s (`let_=`unpack_`=_`in_ x t u) =
+      `let_=`unpack_`=_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
+    ⊆-cont-lemma s (`go-cc[ w' , t ] u) = `go-cc[ w' , ⊆-term-lemma s t ] (⊆-term-lemma s u)
+    ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
+    ⊆-cont-lemma s `halt = `halt
+    ⊆-cont-lemma s (`prim x `in t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t
+    ⊆-cont-lemma s (`let α , x `=unpack v `in t) = `let α , x `=unpack (⊆-term-lemma s v) `in ⊆-cont-lemma (sub-lemma s) t
+
+    ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
+    ⊆-term-lemma s `tt = `tt
+    ⊆-term-lemma s (`string x) = `string x
+    ⊆-term-lemma s `true = `true
+    ⊆-term-lemma s `false = `false
+    ⊆-term-lemma s (` t ∧ u) = ` ⊆-term-lemma s t ∧ ⊆-term-lemma s u
+    ⊆-term-lemma s (` t ∨ u) = ` ⊆-term-lemma s t ∨ ⊆-term-lemma s u
+    ⊆-term-lemma s (`¬ t) = `¬ ⊆-term-lemma s t
+    ⊆-term-lemma s (`n x) = `n x
+    ⊆-term-lemma s (` t ≤ u) = ` ⊆-term-lemma s t ≤ ⊆-term-lemma s u
+    ⊆-term-lemma s (` t + u) = ` ⊆-term-lemma s t + ⊆-term-lemma s u
+    ⊆-term-lemma s (` t * u) = ` ⊆-term-lemma s t * ⊆-term-lemma s u
+    ⊆-term-lemma s (`v x ∈) = `v x (s ∈)
+    ⊆-term-lemma s (`vval u ∈) = `vval u (s ∈)
+    ⊆-term-lemma s (`λ x ⦂ σ ⇒ t) = `λ x ⦂ σ ⇒ t
+    ⊆-term-lemma s (` t , u) = ` ⊆-term-lemma s t , ⊆-term-lemma s u
+    ⊆-term-lemma s (`inl t `as σ) = `inl (⊆-term-lemma s t) `as σ
+    ⊆-term-lemma s (`inr t `as τ) = `inr (⊆-term-lemma s t) `as τ
+    ⊆-term-lemma s (`hold t) = `hold (⊆-term-lemma s t)
+    ⊆-term-lemma s (`sham x) = `sham (λ ω → ⊆-term-lemma s (x ω))
+    ⊆-term-lemma s (`Λ x) = `Λ (λ ω → ⊆-term-lemma s (x ω))
+    ⊆-term-lemma s (`pack ω t) = `pack ω (⊆-term-lemma s t)
+    ⊆-term-lemma s `any = `any
+    ⊆-term-lemma s (`packΣ α t) = `packΣ α (⊆-term-lemma s t)

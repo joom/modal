@@ -76,7 +76,13 @@ module CPStoClosure where
   -- freeVars : ∀ {Γ w Δ} → Γ ⊢ₓ ⋆< w > → Σ Typeₒ (λ α → Δ ⊢ₒ ↓ α < w >)
 
   contextToType : CPS.Types.Context → Typeₒ
-  contextToType g = foldr (λ h τ → ` hypToType h × τ) `Unit g
+  contextToType = foldr (λ h τ → ` hypToType h × τ) `Unit
+
+  contextToTerm : ∀ {w} → (Γ : CPS.Types.Context) → (convertCtx Γ) ⊢ₒ ↓ (contextToType Γ) < w >
+  contextToTerm [] = `tt
+  contextToTerm {w} (x ∷ xs) with contextToTerm {w} xs
+  contextToTerm ((x ⦂ τ < w' >) ∷ xs) | t = ` (`hold (`v x (here refl))) , Closure.Terms.⊆-term-lemma there t
+  contextToTerm ((u ∼ C) ∷ xs) | t = ` `sham (λ ω → `vval u {!!}) , Closure.Terms.⊆-term-lemma there t
 
   mutual
     convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → (convertCtx Γ) ⊢ₒ ⋆< w >
@@ -104,13 +110,17 @@ module CPStoClosure where
 
     convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ₒ ↓ (convertType τ) < w >
     -- Interesting cases
-    convertValue {Γ} (`λ x ⦂ σ ⇒ t) = `packΣ env (` {!!} , (`λ "p" ⦂ ` convertType σ × env ⇒ c ))
+    convertValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) = `packΣ envType (` envTerm , (`λ "p" ⦂ ` convertType σ × envType ⇒ c ))
       where
-        env : Typeₒ
-        env = contextToType Γ
+        envType : Typeₒ
+        envType = contextToType Γ
+
+        envTerm : (convertCtx Γ) ⊢ₒ ↓ envType < w >
+        envTerm = {!!}
+
         c =
-          `let "x" `=snd `v "p" (here refl) `in
-          `let "e" `=fst `v "p" (there (here refl)) `in
+          `let "env" `=snd `v "p" (here refl) `in
+          `let "x" `=fst `v "p" (there (here refl)) `in
           {!!}
     -- Trivial cases
     convertValue `tt = `tt

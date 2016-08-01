@@ -59,12 +59,6 @@ module ML5toCPS where
   ⊆-∈-lemma : ∀ {h} {Γ Γ' : CPS.Types.Context} → Γ ⊆ Γ' → h ∈ Γ → h ∈ Γ'
   ⊆-∈-lemma sub i = sub i
 
-  sub-lemma : ∀ {Γ Δ} {h : Hypₓ} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
-  sub-lemma {h = h} s {x} i with x decHyp h
-  ... | yes p = here p
-  sub-lemma s (here px) | no q = ⊥-elim (q px)
-  sub-lemma s (there i) | no q = there (s i)
-
   convertMobile : ∀ {τ} → ML5.Types._mobile τ → CPS.Types._mobile (convertType τ)
   convertMobile `Boolᵐ = `Boolᵐ
   convertMobile `Intᵐ = `Intᵐ
