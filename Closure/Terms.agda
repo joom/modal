@@ -22,11 +22,11 @@ module Closure.Terms where
 
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
-    `alert : Prim ("alert" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `Unit × β cont) × α cont) < client >)
-    `version : Prim ("version" ⦂ `String < server > )
-    `log : Prim ("log" ∼ (λ ω → `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `Unit × β cont) × α cont)))
-    `prompt : Prim ("prompt" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `String × β cont) × α cont) < client >)
-    `readFile : Prim ("readFile" ⦂ `Σ (λ α → ` α × ` ` ` `String × `Σ (λ β → ` β × ` ` `String × β cont) × α cont) < server >)
+    `alert : Prim ("alert" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client >)
+    `version : Prim ("version" ⦂ `String < server >)
+    `log : Prim ("log" ∼ (λ ω → `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]))
+    `prompt : Prim ("prompt" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < client >)
+    `readFile : Prim ("readFile" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < server >)
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
@@ -81,12 +81,12 @@ module Closure.Terms where
     -- Closure terms
     `go-cc[_,_]_ : ∀ {w} → (w' : World)
                          → Γ ⊢ ↓ ` w' addr < w >
-                         → Γ ⊢ ↓ `Σ (λ α → ` α × (` (` `Unit × α) cont)) < w' >
+                         → Γ ⊢ ↓ `Σt[t×[ `Unit ×t]cont] < w' >
                          → Γ ⊢ ⋆< w >
-    `packΣ : ∀ {w} {C : Type → Type} → (τ : Type) → Γ ⊢ ↓ (C τ) < w > → Γ ⊢ ↓ `Σ C < w >
-    `let_,_`=unpack_`in_ : ∀ {w C} → (τ : Type) (x : Id)
-                           → (v : Γ ⊢ ↓ `Σ C < w >)
-                           → ((x ⦂ C τ < w >) ∷ Γ) ⊢ ⋆< w >
+    `packΣ : ∀ {σ w} → (τ : Type) → Γ ⊢ ↓ (` τ × ` (` σ × τ) cont) < w >  → Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >
+    `let_,_`=unpack_`in_ : ∀ {w σ} → (τ : Type) (x : Id)
+                           → (v : Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >)
+                           → ((x ⦂ ` τ × ` (` σ × τ) cont < w >) ∷ Γ) ⊢ ⋆< w >
                            → Γ ⊢ ⋆< w >
 
   sub-lemma : ∀ {Γ Δ} {h : Hyp} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
@@ -94,6 +94,10 @@ module Closure.Terms where
   ... | yes p = here p
   sub-lemma s (here px) | no q = ⊥-elim (q px)
   sub-lemma s (there i) | no q = there (s i)
+
+  -- postulate
+  --   ⊆-cont-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Γ ⊢ ⋆< w > → Γ' ⊢ ⋆< w >
+  --   ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
 
   -- Weakening
   mutual

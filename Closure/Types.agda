@@ -19,7 +19,6 @@ module Closure.Types where
 
   open import Definitions
 
-  {-# NO_POSITIVITY_CHECK #-}
   data Type : Set where
     `Int `Bool `Unit `String : Type
     `_cont : Type → Type
@@ -28,7 +27,7 @@ module Closure.Types where
     `_addr : World → Type
     `⌘ : (World → Type) → Type -- Shamrock
     `∀ `∃ : (World → Type) → Type
-    `Σ : (Type → Type) → Type
+    `Σt[t×[_×t]cont] : Type → Type
 
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
@@ -60,6 +59,8 @@ module Closure.Types where
   inj≡⊎ refl = refl , refl
   inj≡at : ∀ {σ σ' w w'} → ` σ at w ≡ ` σ' at w' → (σ ≡ σ') × (w ≡ w')
   inj≡at refl = refl , refl
+  inj≡Σ : ∀ {σ τ} → `Σt[t×[_×t]cont] σ ≡ `Σt[t×[_×t]cont] τ → σ ≡ τ
+  inj≡Σ refl = refl
 
   inj≡cont : ∀ {σ τ} → ` σ cont ≡ ` τ cont → σ ≡ τ
   inj≡cont refl = refl
@@ -69,8 +70,6 @@ module Closure.Types where
   inj≡∀ refl = refl
   inj≡∃ : ∀ {C D} → `∃ C ≡ `∃ D → C ≡ D
   inj≡∃ refl = refl
-  inj≡Σ : ∀ {C D} → `Σ C ≡ `Σ D → C ≡ D
-  inj≡Σ refl = refl
   inj≡addr : ∀ {w w'} → ` w addr ≡ ` w' addr → w ≡ w'
   inj≡addr refl = refl
 
@@ -79,20 +78,7 @@ module Closure.Types where
   inj⊎ᵐ : ∀ {τ σ} → (` τ ⊎ σ) mobile → τ mobile × σ mobile
   inj⊎ᵐ (` x ⊎ᵐ y) = x , y
 
-  postulate
-    trustMe : ∀ {l} {A : Set l} → A
-
   mutual
-    _decT→T_ : (C D : Type → Type) → Dec (C ≡ D)
-    C decT→T D = Relation.Nullary.Decidable.map′ extensionality to pf'
-      where
-        pf : (τ : Type) → Dec (C τ ≡ D τ)
-        pf τ = (C τ) dec (D τ)
-        to : C ≡ D → ((τ : Type) → C τ ≡ D τ)
-        to eq τ = cong (λ f → f τ) eq
-        pf' : Dec ((τ : Type) → C τ ≡ D τ)
-        pf' = trustMe -- TODO
-
     -- We can do this because there are a finite number of worlds in
     -- our definitions. Otherwise this would be impossible.
     _decW→T_ : (C D : World → Type) → Dec (C ≡ D)
@@ -148,9 +134,7 @@ module Closure.Types where
     `⌘ C dec `⌘ D = unFnDec C D `⌘ inj≡⌘
     `∀ C dec `∀ D = unFnDec C D `∀ inj≡∀
     `∃ C dec `∃ D = unFnDec C D `∃ inj≡∃
-    `Σ C dec `Σ D with C decT→T D
-    ... | yes p = yes (cong `Σ p)
-    ... | no q = no (q ∘ inj≡Σ)
+    `Σt[t×[_×t]cont] x dec `Σt[t×[_×t]cont] y = unRelDec x y `Σt[t×[_×t]cont] inj≡Σ
     `Int dec `Bool = no (λ ())
     `Int dec `Unit = no (λ ())
     `Int dec `String = no (λ ())
@@ -162,7 +146,7 @@ module Closure.Types where
     `Int dec `⌘ _ = no (λ ())
     `Int dec `∀ _ = no (λ ())
     `Int dec `∃ _ = no (λ ())
-    `Int dec `Σ _ = no (λ ())
+    `Int dec `Σt[t×[_×t]cont] _ = no (λ ())
     `Bool dec `Int = no (λ ())
     `Bool dec `Unit = no (λ ())
     `Bool dec `String = no (λ ())
@@ -174,7 +158,7 @@ module Closure.Types where
     `Bool dec `⌘ _ = no (λ ())
     `Bool dec `∀ _ = no (λ ())
     `Bool dec `∃ _ = no (λ ())
-    `Bool dec `Σ _ = no (λ ())
+    `Bool dec `Σt[t×[_×t]cont] _ = no (λ ())
     `Unit dec `Int = no (λ ())
     `Unit dec `Bool = no (λ ())
     `Unit dec `String = no (λ ())
@@ -186,7 +170,7 @@ module Closure.Types where
     `Unit dec `⌘ _ = no (λ ())
     `Unit dec `∀ _ = no (λ ())
     `Unit dec `∃ _ = no (λ ())
-    `Unit dec `Σ _ = no (λ ())
+    `Unit dec `Σt[t×[_×t]cont] _ = no (λ ())
     `String dec `Int = no (λ ())
     `String dec `Bool = no (λ ())
     `String dec `Unit = no (λ ())
@@ -198,7 +182,7 @@ module Closure.Types where
     `String dec `⌘ _ = no (λ ())
     `String dec `∀ _ = no (λ ())
     `String dec `∃ _ = no (λ ())
-    `String dec `Σ _ = no (λ ())
+    `String dec `Σt[t×[_×t]cont] _ = no (λ ())
     ` _ cont dec `Int = no (λ ())
     ` _ cont dec `Bool = no (λ ())
     ` _ cont dec `Unit = no (λ ())
@@ -210,7 +194,7 @@ module Closure.Types where
     ` _ cont dec `⌘ _ = no (λ ())
     ` _ cont dec `∀ _ = no (λ ())
     ` _ cont dec `∃ _ = no (λ ())
-    ` _ cont dec `Σ _ = no (λ ())
+    ` _ cont dec `Σt[t×[_×t]cont] _ = no (λ ())
     (` _ × _) dec `Int = no (λ ())
     (` _ × _) dec `Bool = no (λ ())
     (` _ × _) dec `Unit = no (λ ())
@@ -222,7 +206,7 @@ module Closure.Types where
     (` _ × _) dec `⌘ _ = no (λ ())
     (` _ × _) dec `∀ _ = no (λ ())
     (` _ × _) dec `∃ _ = no (λ ())
-    (` _ × _) dec `Σ _ = no (λ ())
+    (` _ × _) dec `Σt[t×[_×t]cont] _ = no (λ ())
     (` _ ⊎ _) dec `Int = no (λ ())
     (` _ ⊎ _) dec `Bool = no (λ ())
     (` _ ⊎ _) dec `Unit = no (λ ())
@@ -234,7 +218,7 @@ module Closure.Types where
     (` _ ⊎ _) dec `⌘ _ = no (λ ())
     (` _ ⊎ _) dec `∀ _ = no (λ ())
     (` _ ⊎ _) dec `∃ _ = no (λ ())
-    (` _ ⊎ _) dec `Σ _ = no (λ ())
+    (` _ ⊎ _) dec `Σt[t×[_×t]cont] _ = no (λ ())
     (` _ at _) dec `Int = no (λ ())
     (` _ at _) dec `Bool = no (λ ())
     (` _ at _) dec `Unit = no (λ ())
@@ -246,7 +230,7 @@ module Closure.Types where
     (` _ at _) dec `⌘ _ = no (λ ())
     (` _ at _) dec `∀ _ = no (λ ())
     (` _ at _) dec `∃ _ = no (λ ())
-    (` _ at _) dec `Σ _ = no (λ ())
+    (` _ at _) dec `Σt[t×[_×t]cont] _ = no (λ ())
     ` _ addr dec `Int = no (λ ())
     ` _ addr dec `Bool = no (λ ())
     ` _ addr dec `Unit = no (λ ())
@@ -258,7 +242,7 @@ module Closure.Types where
     ` _ addr dec `⌘ _ = no (λ ())
     ` _ addr dec `∀ _ = no (λ ())
     ` _ addr dec `∃ _ = no (λ ())
-    ` _ addr dec `Σ _ = no (λ ())
+    ` _ addr dec `Σt[t×[_×t]cont] _ = no (λ ())
     `⌘ _ dec `Int = no (λ ())
     `⌘ _ dec `Bool = no (λ ())
     `⌘ _ dec `Unit = no (λ ())
@@ -270,7 +254,7 @@ module Closure.Types where
     `⌘ _ dec ` _ addr = no (λ ())
     `⌘ _ dec `∀ _ = no (λ ())
     `⌘ _ dec `∃ _ = no (λ ())
-    `⌘ _ dec `Σ _ = no (λ ())
+    `⌘ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
     `∀ _ dec `Int = no (λ ())
     `∀ _ dec `Bool = no (λ ())
     `∀ _ dec `Unit = no (λ ())
@@ -282,7 +266,7 @@ module Closure.Types where
     `∀ _ dec ` _ addr = no (λ ())
     `∀ _ dec `⌘ _ = no (λ ())
     `∀ _ dec `∃ _ = no (λ ())
-    `∀ _ dec `Σ _ = no (λ ())
+    `∀ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
     `∃ _ dec `Int = no (λ ())
     `∃ _ dec `Bool = no (λ ())
     `∃ _ dec `Unit = no (λ ())
@@ -294,19 +278,19 @@ module Closure.Types where
     `∃ _ dec ` _ addr = no (λ ())
     `∃ _ dec `⌘ _ = no (λ ())
     `∃ _ dec `∀ _ = no (λ ())
-    `∃ _ dec `Σ _ = no (λ ())
-    `Σ _ dec `Int = no (λ ())
-    `Σ _ dec `Bool = no (λ ())
-    `Σ _ dec `Unit = no (λ ())
-    `Σ _ dec `String = no (λ ())
-    `Σ _ dec ` y cont = no (λ ())
-    `Σ _ dec (` _ × _) = no (λ ())
-    `Σ _ dec (` _ ⊎ _) = no (λ ())
-    `Σ _ dec (` _ at _) = no (λ ())
-    `Σ _ dec ` _ addr = no (λ ())
-    `Σ _ dec `⌘ _ = no (λ ())
-    `Σ _ dec `∀ _ = no (λ ())
-    `Σ _ dec `∃ _ = no (λ ())
+    `∃ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `Int = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `Bool = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `Unit = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `String = no (λ ())
+    `Σt[t×[_×t]cont] _ dec ` y cont = no (λ ())
+    `Σt[t×[_×t]cont] _ dec (` _ × _) = no (λ ())
+    `Σt[t×[_×t]cont] _ dec (` _ ⊎ _) = no (λ ())
+    `Σt[t×[_×t]cont] _ dec (` _ at _) = no (λ ())
+    `Σt[t×[_×t]cont] _ dec ` _ addr = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `⌘ _ = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `∀ _ = no (λ ())
+    `Σt[t×[_×t]cont] _ dec `∃ _ = no (λ ())
 
   inj≡⦂ : ∀ {x x' τ τ' w w'} → x ⦂ τ < w > ≡ x' ⦂ τ' < w' > → (x ≡ x') × (τ ≡ τ') × (w ≡ w')
   inj≡⦂ refl = refl , refl , refl

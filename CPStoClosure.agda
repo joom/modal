@@ -29,7 +29,7 @@ module CPStoClosure where
   convertType `Bool = `Bool
   convertType `Unit = `Unit
   convertType `String = `String
-  convertType ` τ cont = `Σ (λ α → ` α × (` (` convertType τ × α) cont))
+  convertType ` τ cont = `Σt[t×[ convertType τ ×t]cont] -- `Σ (λ α → ` α × (` (` convertType τ × α) cont))
   convertType (` τ × σ) = ` (convertType τ) × (convertType σ)
   convertType (` τ ⊎ σ) = ` (convertType τ) ⊎ (convertType σ)
   convertType (` τ at w) = ` (convertType τ) at w
