@@ -82,7 +82,11 @@ module CPStoClosure where
   contextToTerm [] = `tt
   contextToTerm {w} (x ∷ xs) with contextToTerm {w} xs
   contextToTerm ((x ⦂ τ < w' >) ∷ xs) | t = ` (`hold (`v x (here refl))) , Closure.Terms.⊆-term-lemma there t
-  contextToTerm ((u ∼ C) ∷ xs) | t = ` `sham (λ ω → `vval u {!!}) , Closure.Terms.⊆-term-lemma there t
+  contextToTerm ((u ∼ C) ∷ xs) | t = ` `sham (λ ω → `vval u (here refl)) , Closure.Terms.⊆-term-lemma there t
+
+  contextHelper : (Γ : CPS.Types.Context) → List (Σ Hypₓ (λ h → h ∈ Γ))
+  contextHelper [] = []
+  contextHelper (y ∷ ys) = (y , here refl) ∷ Data.List.map (λ { (h , ∈) → h , there ∈ }) (contextHelper ys)
 
   mutual
     convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → (convertCtx Γ) ⊢ₒ ⋆< w >
@@ -116,12 +120,16 @@ module CPStoClosure where
         envType = contextToType Γ
 
         envTerm : (convertCtx Γ) ⊢ₒ ↓ envType < w >
-        envTerm = {!!}
+        envTerm = contextToTerm Γ
 
+        t' : convertCtx ((x ⦂ σ < w >) ∷ Γ) ⊢ₒ ⋆< w >
+        t' = convertCont t
+
+        c : (("p" ⦂ ` convertType σ × envType < w >) ∷ []) ⊢ₒ ⋆< w >
         c =
           `let "env" `=snd `v "p" (here refl) `in
-          `let "x" `=fst `v "p" (there (here refl)) `in
-          {!!}
+          `let x     `=fst `v "p" (there (here refl)) `in
+          {!t'!}
     -- Trivial cases
     convertValue `tt = `tt
     convertValue (`string x) = `string x
