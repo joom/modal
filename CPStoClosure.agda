@@ -14,6 +14,8 @@ module CPStoClosure where
   open import Data.Nat.Show
   open import Data.List hiding ([_]) renaming (_++_ to _+++_)
   open import Data.List.Any
+  open import Data.List.Any.Properties using (++ʳ)
+  import Data.List.Any.Membership using (_++-mono_)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
@@ -29,7 +31,7 @@ module CPStoClosure where
   convertType `Bool = `Bool
   convertType `Unit = `Unit
   convertType `String = `String
-  convertType ` τ cont = `Σt[t×[ convertType τ ×t]cont] -- `Σ (λ α → ` α × (` (` convertType τ × α) cont))
+  convertType ` τ cont = `Σt[t×[ convertType τ ×t]cont]
   convertType (` τ × σ) = ` (convertType τ) × (convertType σ)
   convertType (` τ ⊎ σ) = ` (convertType τ) ⊎ (convertType σ)
   convertType (` τ at w) = ` (convertType τ) at w
@@ -88,6 +90,7 @@ module CPStoClosure where
   contextHelper [] = []
   contextHelper (y ∷ ys) = (y , here refl) ∷ Data.List.map (λ { (h , ∈) → h , there ∈ }) (contextHelper ys)
 
+  {-# NON_TERMINATING #-} -- TODO
   mutual
     convertCont : ∀ {Γ w} → Γ ⊢ₓ ⋆< w > → (convertCtx Γ) ⊢ₒ ⋆< w >
     -- Interesting cases
@@ -114,22 +117,20 @@ module CPStoClosure where
 
     convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ₒ ↓ (convertType τ) < w >
     -- Interesting cases
-    convertValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) = `packΣ envType (` envTerm , (`λ "p" ⦂ ` convertType σ × envType ⇒ c ))
+    convertValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) = `packΣ (`Env (convertCtx Γ)) (` `buildEnv , (`λ "p" ⦂ _ ⇒ c))
       where
-        envType : Typeₒ
-        envType = contextToType Γ
-
-        envTerm : (convertCtx Γ) ⊢ₒ ↓ envType < w >
-        envTerm = contextToTerm Γ
-
         t' : convertCtx ((x ⦂ σ < w >) ∷ Γ) ⊢ₒ ⋆< w >
         t' = convertCont t
 
-        c : (("p" ⦂ ` convertType σ × envType < w >) ∷ []) ⊢ₒ ⋆< w >
-        c =
-          `let "env" `=snd `v "p" (here refl) `in
-          `let x     `=fst `v "p" (there (here refl)) `in
-          {!t'!}
+        sub-pf : ∀ {h Δ} → h ∷ convertCtx Γ ⊆ h ∷ (convertCtx Γ +++ Δ)
+        sub-pf {h} {Δ} = Closure.Terms.sub-lemma
+            ((Data.List.Any.Membership._++-mono_ {_}{_}{convertCtx Γ}{[]} id (λ ())) ∘ append-rh-[]-⊆ _)
+
+        c : (("p" ⦂ ` convertType σ × `Env (convertCtx Γ) < w >) ∷ []) ⊢ₒ ⋆< w >
+        c = `let "env" `=snd `v "p" (here refl) `in
+            `open `v "env" (here refl) `in
+            `let x `=fst `v "p" (++ʳ (convertCtx Γ) (there (here refl))) `in
+            (Closure.Terms.⊆-cont-lemma sub-pf t')
     -- Trivial cases
     convertValue `tt = `tt
     convertValue (`string x) = `string x

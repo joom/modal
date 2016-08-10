@@ -13,6 +13,7 @@ module Closure.Terms where
   open import Data.Integer
   open import Data.List hiding ([_])
   open import Data.List.Any
+  import Data.List.Any.Membership using (_++-mono_)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
@@ -88,6 +89,9 @@ module Closure.Terms where
                            → (v : Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >)
                            → ((x ⦂ ` τ × ` (` σ × τ) cont < w >) ∷ Γ) ⊢ ⋆< w >
                            → Γ ⊢ ⋆< w >
+    -- Environment terms
+    `buildEnv : ∀ {Δ w} → Γ ⊢ ↓ `Env Δ < w >
+    `open_`in_ : ∀ {Δ w} → Γ ⊢ ↓ `Env Δ < w > → (Δ ++ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
 
   sub-lemma : ∀ {Γ Δ} {h : Hyp} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
   sub-lemma {h = h} s {x} i with x decHyp h
@@ -119,6 +123,10 @@ module Closure.Terms where
     ⊆-cont-lemma s `halt = `halt
     ⊆-cont-lemma s (`prim x `in t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t
     ⊆-cont-lemma s (`let α , x `=unpack v `in t) = `let α , x `=unpack (⊆-term-lemma s v) `in ⊆-cont-lemma (sub-lemma s) t
+    ⊆-cont-lemma {Γ} {Γ'} s (`open_`in_ {Δ} t u) = `open ⊆-term-lemma s t `in ⊆-cont-lemma pf u
+      where
+        pf : Δ ++ Γ ⊆ Δ ++ Γ'
+        pf = Data.List.Any.Membership._++-mono_ {_}{_}{Δ}{Γ}{Δ}{Γ'} id s
 
     ⊆-term-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ ↓ τ < w > → Γ' ⊢ ↓ τ < w >
     ⊆-term-lemma s `tt = `tt
@@ -144,3 +152,4 @@ module Closure.Terms where
     ⊆-term-lemma s (`pack ω t) = `pack ω (⊆-term-lemma s t)
     ⊆-term-lemma s `any = `any
     ⊆-term-lemma s (`packΣ α t) = `packΣ α (⊆-term-lemma s t)
+    ⊆-term-lemma s (`buildEnv) = `buildEnv

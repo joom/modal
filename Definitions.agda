@@ -11,8 +11,12 @@ module Definitions where
   open import Relation.Nullary.Decidable
   open import Data.String
   open import Data.Nat.Show
-  open import Data.List
-  open import Data.Vec
+  open import Data.List renaming (_++_ to _+++_)
+  open import Data.List.Properties using (∷-injective)
+  open import Data.List.Any
+  import Data.List.Any.Membership
+  open Membership-≡ using (_∈_; _⊆_)
+  open import Data.Vec hiding (_∈_)
   open import Data.Empty
   open import Function
 
@@ -54,3 +58,27 @@ module Definitions where
 
   eq-replace : ∀ {a}{A B : Set a} → A ≡ B → A → B
   eq-replace refl x = x
+
+  listDec : ∀ {a} {A : Set a}
+           → ((x y : A) → Dec (x ≡ y))
+           → (xs ys : List A)
+           → Dec (xs ≡ ys)
+  listDec dec [] [] = yes refl
+  listDec dec [] (_ ∷ _) = no (λ ())
+  listDec dec (_ ∷ _) [] = no (λ ())
+  listDec dec (x ∷ xs) (y ∷ ys) with listDec dec xs ys
+  ... | no p = no (p ∘ proj₂ ∘ ∷-injective )
+  ... | yes p with dec x y
+  listDec dec (x ∷ xs) (.x ∷ .xs) | yes refl | yes refl = yes refl
+  ... | no q = no (q ∘ proj₁ ∘ ∷-injective)
+
+  ∷-++-assoc : ∀ {l} {A : Set l} (x : A) (xs ys : List A) → (x ∷ xs) +++ ys ≡ x ∷ (xs +++ ys)
+  ∷-++-assoc x [] ys = refl
+  ∷-++-assoc x (x' ∷ xs) ys = cong (λ l → x ∷ l) (∷-++-assoc x' xs ys)
+
+  append-rh-[] : ∀ {l} {A : Set l} (xs : List A) → (xs +++ []) ≡ xs
+  append-rh-[] [] = refl
+  append-rh-[] (x ∷ xs) = cong (λ l → x ∷ l) (append-rh-[] xs)
+
+  append-rh-[]-⊆ : ∀ {l} {A : Set l} (xs : List A) → xs ⊆ (xs +++ [])
+  append-rh-[]-⊆ xs rewrite append-rh-[] xs = id

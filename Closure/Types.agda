@@ -13,25 +13,28 @@ module Closure.Types where
   open import Data.Nat.Show
   open import Data.List hiding ([_])
   open import Data.List.Any
+  open import Data.List.Properties using (∷-injective)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
 
   open import Definitions
 
-  data Type : Set where
-    `Int `Bool `Unit `String : Type
-    `_cont : Type → Type
-    `_×_ `_⊎_ : Type → Type → Type
-    `_at_ : Type → World → Type
-    `_addr : World → Type
-    `⌘ : (World → Type) → Type -- Shamrock
-    `∀ `∃ : (World → Type) → Type
-    `Σt[t×[_×t]cont] : Type → Type
+  mutual
+    data Type : Set where
+      `Int `Bool `Unit `String : Type
+      `_cont : Type → Type
+      `_×_ `_⊎_ : Type → Type → Type
+      `_at_ : Type → World → Type
+      `_addr : World → Type
+      `⌘ : (World → Type) → Type -- Shamrock
+      `∀ `∃ : (World → Type) → Type
+      `Σt[t×[_×t]cont] : Type → Type
+      `Env : List Hyp → Type
 
-  data Hyp : Set where
-    _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
-    _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
+    data Hyp : Set where
+      _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
+      _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
 
   data Conc : Set where
     ⋆<_> : (w : World) → Conc -- Well-formed continuation
@@ -61,6 +64,8 @@ module Closure.Types where
   inj≡at refl = refl , refl
   inj≡Σ : ∀ {σ τ} → `Σt[t×[_×t]cont] σ ≡ `Σt[t×[_×t]cont] τ → σ ≡ τ
   inj≡Σ refl = refl
+  inj≡Env : ∀ {Γ Δ} → `Env Γ ≡ `Env Δ → Γ ≡ Δ
+  inj≡Env refl = refl
 
   inj≡cont : ∀ {σ τ} → ` σ cont ≡ ` τ cont → σ ≡ τ
   inj≡cont refl = refl
@@ -77,6 +82,11 @@ module Closure.Types where
   inj×ᵐ (` x ×ᵐ y) = x , y
   inj⊎ᵐ : ∀ {τ σ} → (` τ ⊎ σ) mobile → τ mobile × σ mobile
   inj⊎ᵐ (` x ⊎ᵐ y) = x , y
+
+  inj≡⦂ : ∀ {x x' τ τ' w w'} → x ⦂ τ < w > ≡ x' ⦂ τ' < w' > → (x ≡ x') × (τ ≡ τ') × (w ≡ w')
+  inj≡⦂ refl = refl , refl , refl
+  inj≡∼ : ∀ {u u' C C'} → u ∼ C ≡ u' ∼ C' → (u ≡ u') × (C ≡ C')
+  inj≡∼ refl = refl , refl
 
   mutual
     -- We can do this because there are a finite number of worlds in
@@ -135,6 +145,9 @@ module Closure.Types where
     `∀ C dec `∀ D = unFnDec C D `∀ inj≡∀
     `∃ C dec `∃ D = unFnDec C D `∃ inj≡∃
     `Σt[t×[_×t]cont] x dec `Σt[t×[_×t]cont] y = unRelDec x y `Σt[t×[_×t]cont] inj≡Σ
+    `Env Γ dec `Env Δ with contextDec Γ Δ
+    `Env Γ dec `Env .Γ | yes refl = yes refl
+    ... | no q = no (q ∘ inj≡Env)
     `Int dec `Bool = no (λ ())
     `Int dec `Unit = no (λ ())
     `Int dec `String = no (λ ())
@@ -291,21 +304,55 @@ module Closure.Types where
     `Σt[t×[_×t]cont] _ dec `⌘ _ = no (λ ())
     `Σt[t×[_×t]cont] _ dec `∀ _ = no (λ ())
     `Σt[t×[_×t]cont] _ dec `∃ _ = no (λ ())
+    _dec_ (`Env _) `Int = no (λ ())
+    _dec_ (`Env _) `Bool = no (λ ())
+    _dec_ (`Env _) `Unit = no (λ ())
+    _dec_ (`Env _) `String = no (λ ())
+    _dec_ (`Env _) (`_cont _) = no (λ ())
+    _dec_ (`Env _) (`_×_ _ _) = no (λ ())
+    _dec_ (`Env _) (`_⊎_ _ _) = no (λ ())
+    _dec_ (`Env _) (`_at_ _ _) = no (λ ())
+    _dec_ (`Env _) (`_addr _) = no (λ ())
+    _dec_ (`Env _) (`⌘ _) = no (λ ())
+    _dec_ (`Env _) (`∀ _) = no (λ ())
+    _dec_ (`Env _) (`∃ _) = no (λ ())
+    _dec_ (`Env _) (`Σt[t×[_×t]cont] _) = no (λ ())
+    `Int dec `Env _ = no (λ ())
+    `Bool dec `Env _ = no (λ ())
+    `Unit dec `Env _ = no (λ ())
+    `String dec `Env _ = no (λ ())
+    ` _ cont dec `Env _ = no (λ ())
+    (` _ × _) dec `Env _ = no (λ ())
+    (` _ ⊎ _) dec `Env _ = no (λ ())
+    (` _ at _) dec `Env _ = no (λ ())
+    ` _ addr dec `Env _ = no (λ ())
+    `⌘ _ dec `Env _ = no (λ ())
+    `∀ _ dec `Env _ = no (λ ())
+    `∃ _ dec `Env _ = no (λ ())
+    `Σt[t×[ _ ×t]cont] dec `Env _ = no (λ ())
 
-  inj≡⦂ : ∀ {x x' τ τ' w w'} → x ⦂ τ < w > ≡ x' ⦂ τ' < w' > → (x ≡ x') × (τ ≡ τ') × (w ≡ w')
-  inj≡⦂ refl = refl , refl , refl
-  inj≡∼ : ∀ {u u' C C'} → u ∼ C ≡ u' ∼ C' → (u ≡ u') × (C ≡ C')
-  inj≡∼ refl = refl , refl
+    _decHyp_ : (x y : Hyp) → Dec (x ≡ y)
+    (x ⦂ τ < w >) decHyp (y ⦂ σ < w' >) with x Data.String.≟ y | τ dec σ | w decW w'
+    ... | yes p | yes q | yes r = yes (cong₃ _⦂_<_> p q r)
+    ... | no  p | _     | _     = no (p ∘ proj₁ ∘ inj≡⦂)
+    ... | _     | no  q | _     = no (q ∘ (proj₁ ∘ proj₂) ∘ inj≡⦂)
+    ... | _     | _     | no  r = no (r ∘ (proj₂ ∘ proj₂) ∘ inj≡⦂)
+    (u ∼ C) decHyp (v ∼ D) with u Data.String.≟ v | C decW→T D
+    ... | yes p | yes q = yes (cong₂ _∼_ p q)
+    ... | no  p | _     = no (p ∘ proj₁ ∘ inj≡∼)
+    ... | _     | no  q = no (q ∘ proj₂ ∘ inj≡∼)
+    (_ ⦂ _ < _ >) decHyp (_ ∼ _) = no (λ ())
+    (_ ∼ _) decHyp (_ ⦂ _ < _ >) = no (λ ())
 
-  _decHyp_ : (x y : Hyp) → Dec (x ≡ y)
-  (x ⦂ τ < w >) decHyp (y ⦂ σ < w' >) with x Data.String.≟ y | τ dec σ | w decW w'
-  ... | yes p | yes q | yes r = yes (cong₃ _⦂_<_> p q r)
-  ... | no  p | _     | _     = no (p ∘ proj₁ ∘ inj≡⦂)
-  ... | _     | no  q | _     = no (q ∘ (proj₁ ∘ proj₂) ∘ inj≡⦂)
-  ... | _     | _     | no  r = no (r ∘ (proj₂ ∘ proj₂) ∘ inj≡⦂)
-  (u ∼ C) decHyp (v ∼ D) with u Data.String.≟ v | C decW→T D
-  ... | yes p | yes q = yes (cong₂ _∼_ p q)
-  ... | no  p | _     = no (p ∘ proj₁ ∘ inj≡∼)
-  ... | _     | no  q = no (q ∘ proj₂ ∘ inj≡∼)
-  (_ ⦂ _ < _ >) decHyp (_ ∼ _) = no (λ ())
-  (_ ∼ _) decHyp (_ ⦂ _ < _ >) = no (λ ())
+    -- Monomorphic instance of Definitions.listDec
+    -- Included here to make it obvious to Agda that it terminates.
+    -- We could just say `contextDec = Definitions.listDec _decHyp_`
+    contextDec : (Γ Δ : Context) → Dec (Γ ≡ Δ)
+    contextDec [] [] = yes refl
+    contextDec [] (_ ∷ _) = no (λ ())
+    contextDec (_ ∷ _) [] = no (λ ())
+    contextDec (x ∷ xs) (y ∷ ys) with contextDec xs ys
+    ... | no p = no (p ∘ proj₂ ∘ ∷-injective)
+    ... | yes p with x decHyp y
+    contextDec (x ∷ xs) (.x ∷ .xs) | yes refl | yes refl = yes refl
+    ... | no q = no (q ∘ proj₁ ∘ ∷-injective)
