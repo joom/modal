@@ -67,14 +67,23 @@ module LambdaLifting where
     liftValue {Γ} n (` t , u) with liftValue n t
     ... | n' , xs , Δ , t' with liftValue n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' , ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue n (`inl t `as σ) = n , [] , [] , `inl ⊆-term-lemma ++ˡ t `as σ
-    liftValue n (`inr t `as τ) = n , [] , [] , `inr ⊆-term-lemma ++ˡ  t `as τ
-    liftValue n (`hold t) = n , [] , [] , `hold (⊆-term-lemma ++ˡ t)
-    liftValue n (`sham x) = n , [] , [] , `sham (λ ω → ⊆-term-lemma ++ˡ (x ω))
-    liftValue n (`Λ x) = n , [] , [] , `Λ (λ ω → ⊆-term-lemma ++ˡ (x ω))
-    liftValue n (`pack ω t) = n , [] , [] , `pack ω (⊆-term-lemma ++ˡ t)
+    liftValue n (`inl t `as σ) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `inl t' `as σ
+    liftValue n (`inr t `as τ) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `inr t' `as τ
+    liftValue n (`hold t) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `hold t'
+    liftValue {Γ} n (`sham C) with liftValue n (C client)
+    ... | n' , xs , Δ , u with liftValue n' (C server)
+    ... | n'' , ys , Φ , v = n'' , xs +++ ys , Δ +++ Φ , `sham (λ {client → ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) u ; server → ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) v})
+    liftValue {Γ} n (`Λ C) with liftValue n (C client)
+    ... | n' , xs , Δ , u with liftValue n' (C server)
+    ... | n'' , ys , Φ , v = n'' , xs +++ ys , Δ +++ Φ , `Λ (λ {client → ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) u ; server → ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) v})
+    liftValue n (`pack ω t) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `pack ω t'
     liftValue n `any = n , [] , [] , `any
-    liftValue n (`packΣ τ t) = n , [] , [] , `packΣ τ (⊆-term-lemma ++ˡ t)
+    liftValue n (`packΣ τ t) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `packΣ τ t'
     liftValue n `buildEnv = n , [] , [] , `buildEnv
 
     -- Hint: maybe we can use this to prove complex subset holes.
@@ -128,14 +137,17 @@ module LambdaLifting where
     ... | n' , xs , Δ , t' with liftValue n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `call (⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t') (⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
     liftCont n `halt = n , [] , [] , `halt
-    liftCont n (`prim x `in t) = n , [] , [] , `prim x `in ⊆-cont-lemma ++ˡ t
+    liftCont n (`prim x `in t) with liftCont n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `prim x `in t'
     liftCont n (`go-cc[ w' , t ] u) with liftValue n u
     ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' , `any ] u')
     liftCont {Γ} n (`let τ , x `=unpack t `in u) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `let τ , x `=unpack ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
                                        `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} n (`open_`in_ {Δ} t u) = n , [] , [] , `open ⊆-term-lemma ++ˡ t `in ⊆-cont-lemma (proj₂ (≡-⊆ (append-assoc Δ Γ [])) ∘ ++ˡ) u
+    liftCont {Γ} n (`open_`in_ {Δ} t u) with liftValue n t
+    ... | n' , xs , Φ , t' with liftCont n' u
+    ... | n'' , ys , Ψ , u' = n'' , xs +++ ys , Φ +++ Ψ , `open ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Φ Ψ)) ∘ ++ˡ) t' `in ⊆-cont-lemma trustMe u'
 
   entryPoint : ∀ {Γ w}
              → Γ ⊢ₒ ⋆< w >
