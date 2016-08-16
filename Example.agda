@@ -25,13 +25,14 @@ module Example where
   open import ML5.Terms renaming (_⊢_ to _⊢₅_)
   open import CPS.Types renaming (Type to Typeₓ ; Hyp to Hypₓ)
   open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
-  open import Closure.Types renaming (Type to Typeₒ ; Hyp to Hypₒ)
+  open import Closure.Types renaming (Type to Typeₒ ; Hyp to Hypₒ ; Context to Contextₒ)
   open import Closure.Terms renaming (_⊢_ to _⊢ₒ_)
   open import JS.Types renaming (Type to Typeⱼ ; Hyp to Hypⱼ)
   open import JS.Terms renaming (_⊢_ to _⊢ⱼ_)
   open import JS.Source
   open import ML5toCPS
   open import CPStoClosure
+  open import LambdaLifting
 
   logVersion : [] ⊢₅ `Unit < client >
   logVersion =
@@ -45,6 +46,9 @@ module Example where
 
   logVersionClosure : [] ⊢ₒ ⋆< client >
   logVersionClosure = CPStoClosure.convertCont logVersionCPS
+
+  logVersionLifting : List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
+  logVersionLifting = LambdaLifting.entryPoint logVersionClosure
 
   logJS-test : Stm [] < client >
   logJS-test =

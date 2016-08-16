@@ -2,6 +2,7 @@ module LambdaLifting where
 
   open import Data.Bool
   open import Data.Nat hiding (erase)
+  open import Data.Nat.Show
   import Data.Unit
   open import Data.Maybe
   open import Data.Product
@@ -16,7 +17,7 @@ module LambdaLifting where
   open import Data.List.Any.Membership using (concat-mono)
   open import Data.List.Any
   open import Data.List.Any.Properties using (++ʳ ; ++ˡ)
-  open import Data.Vec
+  open import Data.Vec hiding (_++_)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
@@ -29,44 +30,52 @@ module LambdaLifting where
   postulate
     trustMe : ∀ {l} {A : Set l} → A
 
+  -- Accumulating ℕ to generate fresh variable names.
   mutual
     liftValue : ∀ {Γ τ w}
+              → ℕ
               → Γ ⊢ₒ ↓ τ < w >
-              → List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ↓ τ < w >)
+              → ℕ × List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ↓ τ < w >)
     -- Interesting case
-    liftValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) with liftCont t -- there might be nested λ's
-    ... | xs , Δ , t' = ((` σ cont , w) , `λ x ⦂ σ ⇒ t) ∷ xs , ({!!} ⦂ ` σ cont < w >) ∷ Δ , `v {!!} (++ʳ Γ (here refl))
+    liftValue {Γ}{_}{w} n (`λ x ⦂ σ ⇒ t) with liftCont n t -- there might be nested λ's
+    ... | n' , xs , Δ , t' = suc n' , ((` σ cont , w) , `λ x ⦂ σ ⇒ t) ∷ xs , (("_lam" ++ show n') ⦂ ` σ cont < w >) ∷ Δ , `v ("_lam" ++ show n') (++ʳ Γ (here refl))
     -- Trivial cases
-    liftValue `tt = [] , [] , `tt
-    liftValue (`string x) = [] , [] , `string x
-    liftValue `true = [] , [] , `true
-    liftValue `false = [] , [] , `false
-    liftValue {Γ} (` t ∧ u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ∧ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue {Γ} (` t ∨ u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ∨ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue (`¬ t) with liftValue t
-    ... | xs , Δ , t' = xs , Δ , `¬ t'
-    liftValue (`n x) = [] , [] , `n x
-    liftValue {Γ} (` t ≤ u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ≤ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue {Γ} (` t + u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' + ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue {Γ} (` t * u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' * ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue (`v x ∈) = [] , [] , `v x (++ˡ ∈)
-    liftValue (`vval u ∈) = [] , [] , `vval u (++ˡ ∈)
-    liftValue {Γ} (` t , u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' , ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftValue (`inl t `as σ) = [] , [] , `inl ⊆-term-lemma ++ˡ t `as σ
-    liftValue (`inr t `as τ) = [] , [] , `inr ⊆-term-lemma ++ˡ  t `as τ
-    liftValue (`hold t) = [] , [] , `hold (⊆-term-lemma ++ˡ t)
-    liftValue (`sham x) = [] , [] , `sham (λ ω → ⊆-term-lemma ++ˡ (x ω))
-    liftValue (`Λ x) = [] , [] , `Λ (λ ω → ⊆-term-lemma ++ˡ (x ω))
-    liftValue (`pack ω t) = [] , [] , `pack ω (⊆-term-lemma ++ˡ t)
-    liftValue `any = [] , [] , `any
-    liftValue (`packΣ τ t) = [] , [] , `packΣ τ (⊆-term-lemma ++ˡ t)
-    liftValue `buildEnv = [] , [] , `buildEnv
+    liftValue n `tt = n , [] , [] , `tt
+    liftValue n (`string x) = n ,  [] , [] , `string x
+    liftValue n `true = n , [] , [] , `true
+    liftValue n `false = n , [] , [] , `false
+    liftValue {Γ} n (` t ∧ u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ∧ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue {Γ} n (` t ∨ u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ∨ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue n (`¬ t) with liftValue n t
+    ... | n' , xs , Δ , t' = n' , xs , Δ , `¬ t'
+    liftValue n (`n x) = n , [] , [] , `n x
+    liftValue {Γ} n (` t ≤ u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' ≤ ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue {Γ} n (` t + u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' + ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue {Γ} n (` t * u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' * ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue n (`v x ∈) = n , [] , [] , `v x (++ˡ ∈)
+    liftValue n (`vval u ∈) = n , [] , [] , `vval u (++ˡ ∈)
+    liftValue {Γ} n (` t , u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , (` ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t' , ⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftValue n (`inl t `as σ) = n , [] , [] , `inl ⊆-term-lemma ++ˡ t `as σ
+    liftValue n (`inr t `as τ) = n , [] , [] , `inr ⊆-term-lemma ++ˡ  t `as τ
+    liftValue n (`hold t) = n , [] , [] , `hold (⊆-term-lemma ++ˡ t)
+    liftValue n (`sham x) = n , [] , [] , `sham (λ ω → ⊆-term-lemma ++ˡ (x ω))
+    liftValue n (`Λ x) = n , [] , [] , `Λ (λ ω → ⊆-term-lemma ++ˡ (x ω))
+    liftValue n (`pack ω t) = n , [] , [] , `pack ω (⊆-term-lemma ++ˡ t)
+    liftValue n `any = n , [] , [] , `any
+    liftValue n (`packΣ τ t) = n , [] , [] , `packΣ τ (⊆-term-lemma ++ˡ t)
+    liftValue n `buildEnv = n , [] , [] , `buildEnv
 
     -- Hint: maybe we can use this to prove complex subset holes.
     -- concat-mono {xss = Γ ∷ Δ ∷ []} {yss = Γ ∷ Δ ∷ Φ ∷ Ψ ∷ []}
@@ -74,44 +83,61 @@ module LambdaLifting where
     -- They are non-essential for the project so I'm ignoring it for now.
 
     liftCont : ∀ {Γ w}
+             → ℕ
+             → Γ ⊢ₒ ⋆< w >
+             → ℕ × List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
+    liftCont {Γ} n (`if t `then u `else v) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' with liftCont n'' v
+    ... | n''' , zs , Ψ , v' = n''' , xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , (`if ⊆-term-lemma trustMe t' `then ⊆-cont-lemma trustMe u' `else ⊆-cont-lemma trustMe v')
+    liftCont {Γ} n (`letcase x , y `= t `in u `or v) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' with liftCont n'' v
+    ... | n''' , zs , Ψ , v' = n''' , xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , (`letcase x , y `= ⊆-term-lemma trustMe t' `in ⊆-cont-lemma trustMe u' `or ⊆-cont-lemma trustMe v')
+    liftCont {Γ} n (`leta x `= t `in u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `leta x `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
+    liftCont {Γ} n (`lets u `= t `in v) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' v
+    ... | n'' , ys , Φ , v' = n'' ,  xs +++ ys , Δ +++ Φ , `lets u `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) v'
+    liftCont {Γ} n (`put_`=_`in_ {m = m} u t v) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' v
+    ... | n'' , ys , Φ , v' = n'' ,  xs +++ ys , Δ +++ Φ , `put_`=_`in_ {m = m} u (⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t')
+                                       (⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) v')
+    liftCont {Γ} n (`let x `=fst t `in u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `let x `=fst ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
+    liftCont {Γ} n (`let x `=snd t `in u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `let x `=snd ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
+    liftCont {Γ} n (`let x `=localhost`in t) = n , [] , [] , `halt
+    liftCont {Γ} n (`let x `= t ⟨ w' ⟩`in u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `let x `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
+    liftCont {Γ} n (`let_=`unpack_`=_`in_ x t u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' (u client)
+    ... | n'' , ys , Φ , u' with liftCont n'' (u server)
+    ... | n''' , zs , Ψ , v' = n''' , xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , `let_=`unpack_`=_`in_ x (⊆-term-lemma trustMe t')
+      (λ {client → ⊆-cont-lemma (sub-lemma trustMe) u' ; server → ⊆-cont-lemma (sub-lemma trustMe) v'})
+    liftCont {Γ} n (`call t u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftValue n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `call (⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t') (⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
+    liftCont n `halt = n , [] , [] , `halt
+    liftCont n (`prim x `in t) = n , [] , [] , `prim x `in ⊆-cont-lemma ++ˡ t
+    liftCont n (`go-cc[ w' , t ] u) with liftValue n u
+    ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' , `any ] u')
+    liftCont {Γ} n (`let τ , x `=unpack t `in u) with liftValue n t
+    ... | n' , xs , Δ , t' with liftCont n' u
+    ... | n'' , ys , Φ , u' = n'' , xs +++ ys , Δ +++ Φ , `let τ , x `=unpack ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
+                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
+    liftCont {Γ} n (`open_`in_ {Δ} t u) = n , [] , [] , `open ⊆-term-lemma ++ˡ t `in ⊆-cont-lemma (proj₂ (≡-⊆ (append-assoc Δ Γ [])) ∘ ++ˡ) u
+
+  entryPoint : ∀ {Γ w}
              → Γ ⊢ₒ ⋆< w >
              → List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
-    liftCont {Γ} (`if t `then u `else v) with liftValue t | liftCont u | liftCont v
-    ... | xs , Δ , t' | ys , Φ , u' | zs , Ψ , v' = xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , (`if ⊆-term-lemma trustMe t' `then ⊆-cont-lemma trustMe u' `else ⊆-cont-lemma trustMe v')
-    liftCont {Γ} (`letcase x , y `= t `in u `or v) with liftValue t | liftCont u | liftCont v
-    ... | xs , Δ , t' | ys , Φ , u' | zs , Ψ , v' = xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , (`letcase x , y `= ⊆-term-lemma trustMe t' `in ⊆-cont-lemma trustMe u' `or ⊆-cont-lemma trustMe v')
-    liftCont {Γ} (`leta x `= t `in u) with liftValue t | liftCont u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `leta x `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} (`lets u `= t `in v) with liftValue t | liftCont v
-    ... | xs , Δ , t' | ys , Φ , v' = xs +++ ys , Δ +++ Φ , `lets u `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) v'
-    liftCont {Γ} (`put_`=_`in_ {m = m} u t v) with liftValue t | liftCont v
-    ... | xs , Δ , t' | ys , Φ , v' = xs +++ ys , Δ +++ Φ , `put_`=_`in_ {m = m} u (⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t')
-                                       (⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) v')
-    liftCont {Γ} (`let x `=fst t `in u) with liftValue t | liftCont u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `let x `=fst ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} (`let x `=snd t `in u) with liftValue t | liftCont u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `let x `=snd ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} (`let x `=localhost`in t) = [] , [] , `halt
-    liftCont {Γ} (`let x `= t ⟨ w' ⟩`in u) with liftValue t | liftCont u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `let x `= ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} (`let_=`unpack_`=_`in_ x t u) with liftValue t | liftCont (u client) | liftCont (u server)
-    ... | xs , Δ , t' | ys , Φ , u' | zs , Ψ , v' = xs +++ ys +++ zs , Δ +++ Φ +++ Ψ , `let_=`unpack_`=_`in_ x (⊆-term-lemma trustMe t')
-      (λ {client → ⊆-cont-lemma (sub-lemma trustMe) u' ; server → ⊆-cont-lemma (sub-lemma trustMe) v'})
-    liftCont {Γ} (`call t u) with liftValue t | liftValue u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `call (⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t') (⊆-term-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ})) u')
-    liftCont `halt = [] , [] , `halt
-    liftCont (`prim x `in t) = [] , [] , `prim x `in ⊆-cont-lemma ++ˡ t
-    liftCont (`go-cc[ w' , t ] u) with liftValue u
-    ... | xs , Δ , u' = xs , Δ , (`go-cc[ w' , `any ] u')
-    liftCont {Γ} (`let τ , x `=unpack t `in u) with liftValue t | liftCont u
-    ... | xs , Δ , t' | ys , Φ , u' = xs +++ ys , Δ +++ Φ , `let τ , x `=unpack ⊆-term-lemma (proj₂ (≡-⊆ (append-assoc Γ Δ Φ)) ∘ ++ˡ) t'
-                                       `in ⊆-cont-lemma (sub-lemma (append-lh-⊆ Γ _ _ (++ʳ (Δ) {ys = Φ}))) u'
-    liftCont {Γ} (`open_`in_ {Δ} t u) = [] , [] , `open ⊆-term-lemma ++ˡ t `in ⊆-cont-lemma (proj₂ (≡-⊆ (append-assoc Δ Γ [])) ∘ ++ˡ) u
-
-  -- collect : ∀ {Γ τ w} → Γ ⊢ₒ ↓ τ < w > → List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >}))
-  -- collect t = {!!}
+  entryPoint t = proj₂ (liftCont zero t)
