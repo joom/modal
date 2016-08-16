@@ -72,13 +72,16 @@ module Definitions where
   listDec dec (x ∷ xs) (.x ∷ .xs) | yes refl | yes refl = yes refl
   ... | no q = no (q ∘ proj₁ ∘ ∷-injective)
 
-  ∷-++-assoc : ∀ {l} {A : Set l} (x : A) (xs ys : List A) → (x ∷ xs) +++ ys ≡ x ∷ (xs +++ ys)
-  ∷-++-assoc x [] ys = refl
-  ∷-++-assoc x (x' ∷ xs) ys = cong (λ l → x ∷ l) (∷-++-assoc x' xs ys)
+  ≡-⊆ : ∀ {l} {A : Set l} {xs ys : List A} → xs ≡ ys → (xs ⊆ ys) × (ys ⊆ xs)
+  ≡-⊆ refl = id , id
 
   append-rh-[] : ∀ {l} {A : Set l} (xs : List A) → (xs +++ []) ≡ xs
   append-rh-[] [] = refl
   append-rh-[] (x ∷ xs) = cong (λ l → x ∷ l) (append-rh-[] xs)
 
-  append-rh-[]-⊆ : ∀ {l} {A : Set l} (xs : List A) → xs ⊆ (xs +++ [])
-  append-rh-[]-⊆ xs rewrite append-rh-[] xs = id
+  append-assoc : ∀ {l} {A : Set l} (xs ys zs : List A) → xs +++ (ys +++ zs) ≡ (xs +++ ys) +++ zs
+  append-assoc []       ys zs = refl
+  append-assoc (x ∷ xs) ys zs = cong (_∷_ x) (append-assoc xs ys zs)
+
+  append-lh-⊆ : ∀ {l} {A : Set l} (xs ys zs : List A) → ys ⊆ zs → (xs +++ ys) ⊆ (xs +++ zs)
+  append-lh-⊆ xs ys zs s =  Data.List.Any.Membership._++-mono_ {_}{_}{xs}{ys}{xs}{zs} id s

@@ -14,7 +14,7 @@ module CPStoClosure where
   open import Data.Nat.Show
   open import Data.List hiding ([_]) renaming (_++_ to _+++_)
   open import Data.List.Any
-  open import Data.List.Any.Properties using (++ʳ)
+  open import Data.List.Any.Properties using (++ʳ ; ++ˡ)
   import Data.List.Any.Membership using (_++-mono_)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
@@ -122,15 +122,11 @@ module CPStoClosure where
         t' : convertCtx ((x ⦂ σ < w >) ∷ Γ) ⊢ₒ ⋆< w >
         t' = convertCont t
 
-        sub-pf : ∀ {h Δ} → h ∷ convertCtx Γ ⊆ h ∷ (convertCtx Γ +++ Δ)
-        sub-pf {h} {Δ} = Closure.Terms.sub-lemma
-            ((Data.List.Any.Membership._++-mono_ {_}{_}{convertCtx Γ}{[]} id (λ ())) ∘ append-rh-[]-⊆ _)
-
         c : (("p" ⦂ ` convertType σ × `Env (convertCtx Γ) < w >) ∷ []) ⊢ₒ ⋆< w >
         c = `let "env" `=snd `v "p" (here refl) `in
             `open `v "env" (here refl) `in
             `let x `=fst `v "p" (++ʳ (convertCtx Γ) (there (here refl))) `in
-            (Closure.Terms.⊆-cont-lemma sub-pf t')
+            (Closure.Terms.⊆-cont-lemma (Closure.Terms.sub-lemma ++ˡ) t')
     -- Trivial cases
     convertValue `tt = `tt
     convertValue (`string x) = `string x
