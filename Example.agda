@@ -47,7 +47,7 @@ module Example where
   logVersionClosure : [] ⊢ₒ ⋆< client >
   logVersionClosure = CPStoClosure.convertCont logVersionCPS
 
-  logVersionLifting : List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
+  logVersionLifting : List (Σ _ (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
   logVersionLifting = LambdaLifting.entryPoint logVersionClosure
 
   logJS-test : Stm [] < client >

@@ -35,10 +35,10 @@ module LambdaLifting where
     liftValue : ∀ {Γ τ w}
               → ℕ
               → Γ ⊢ₒ ↓ τ < w >
-              → ℕ × List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ↓ τ < w >)
+              → ℕ × List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ↓ τ < w >)
     -- Interesting case
     liftValue {Γ}{_}{w} n (`λ x ⦂ σ ⇒ t) with liftCont n t -- there might be nested λ's
-    ... | n' , xs , Δ , t' = suc n' , ((` σ cont , w) , `λ x ⦂ σ ⇒ t) ∷ xs , (("_lam" ++ show n') ⦂ ` σ cont < w >) ∷ Δ , `v ("_lam" ++ show n') (++ʳ Γ (here refl))
+    ... | n' , xs , Δ , t' = suc n' , (("_lam" ++ show n' , ` σ cont , w) , `λ x ⦂ σ ⇒ t) ∷ xs , (("_lam" ++ show n') ⦂ ` σ cont < w >) ∷ Δ , `v ("_lam" ++ show n') (++ʳ Γ (here refl))
     -- Trivial cases
     liftValue n `tt = n , [] , [] , `tt
     liftValue n (`string x) = n ,  [] , [] , `string x
@@ -94,7 +94,7 @@ module LambdaLifting where
     liftCont : ∀ {Γ w}
              → ℕ
              → Γ ⊢ₒ ⋆< w >
-             → ℕ × List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
+             → ℕ × List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
     liftCont {Γ} n (`if t `then u `else v) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' with liftCont n'' v
@@ -151,5 +151,5 @@ module LambdaLifting where
 
   entryPoint : ∀ {Γ w}
              → Γ ⊢ₒ ⋆< w >
-             → List (Σ _ (λ { (σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
+             → List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → (Γ +++ Δ) ⊢ₒ ⋆< w >)
   entryPoint t = proj₂ (liftCont zero t)
