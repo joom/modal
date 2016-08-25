@@ -43,7 +43,6 @@ module CPStoJS where
   convertType (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType τ ) ∷ ("snd" , convertType σ) ∷ [])
   convertType (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType τ) ∷ ("inr" , convertType σ) ∷ [])
   convertType (` τ at w) = convertType τ
-  convertType ` x addr = `Object (("type" , `String) ∷ [])
   convertType (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
   convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
   convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
@@ -82,10 +81,9 @@ module CPStoJS where
     convertCont w (`put u `= t `in t₁) = {!!}
     convertCont w (`let x `=fst t `in t₁) = {!!}
     convertCont w (`let x `=snd t `in t₁) = {!!}
-    convertCont w (`let x `=localhost`in t) = {!!}
     convertCont w (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
     convertCont w (`let_=`unpack_`=_`in_ x t x₁) = {!!}
-    convertCont w (`go[ w' , t ] t₁) = {!!}
+    convertCont w (`go[ w' ] t₁) = {!!}
     convertCont w (`call t t₁) = {!!}
     convertCont w `halt = {!!}
     convertCont {s = s} {s' = s'} client (`prim x `in t)
@@ -133,7 +131,6 @@ module CPStoJS where
     convertValue (`sham x) = {!!}
     convertValue (`Λ x) = {!!}
     convertValue (`pack ω t) = {!!}
-    convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
 
   entryPoint : [] ⊢ₓ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
   entryPoint t with convertCont {s = {!!} }{s' = {!!}} client t

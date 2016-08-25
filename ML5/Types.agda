@@ -7,7 +7,6 @@ module ML5.Types where
     `Int `Bool `Unit `String : Type
     `_⇒_ `_×_ `_⊎_ : Type → Type → Type
     `_at_ : Type → World → Type
-    `_addr : World → Type
     `⌘ : (World → Type) → Type -- Shamrock
     `∀ `∃ : (World → Type) → Type
 
@@ -32,4 +31,3 @@ module ML5.Types where
     `∀ᵐ : ∀ {A} → A mobile → (`∀ (λ _ → A)) mobile
     `∃ᵐ : ∀ {A} → A mobile → (`∃ (λ _ → A)) mobile
     `⌘ᵐ : ∀ {A} → (`⌘ (λ _ → A)) mobile
-    _addrᵐ : ∀ {w} → (` w addr) mobile

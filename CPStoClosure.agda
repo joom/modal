@@ -35,7 +35,6 @@ module CPStoClosure where
   convertType (` τ × σ) = ` (convertType τ) × (convertType σ)
   convertType (` τ ⊎ σ) = ` (convertType τ) ⊎ (convertType σ)
   convertType (` τ at w) = ` (convertType τ) at w
-  convertType ` w addr = ` w addr
   convertType (`⌘ C) = `⌘ (λ ω → convertType (C ω))
   convertType (`∀ C) = `∀ (λ ω → convertType (C ω))
   convertType (`∃ C) = `∃ (λ ω → convertType (C ω))
@@ -51,7 +50,6 @@ module CPStoClosure where
   convertMobile (`∀ᵐ m) = `∀ᵐ (convertMobile m)
   convertMobile (`∃ᵐ m) = `∃ᵐ (convertMobile m)
   convertMobile `⌘ᵐ = `⌘ᵐ
-  convertMobile _addrᵐ = _addrᵐ
 
   convertHyp : Hypₓ → Hypₒ
   convertHyp (x ⦂ τ < w >) = x ⦂ (convertType τ) < w >
@@ -100,7 +98,7 @@ module CPStoClosure where
       `let "f" `=snd `v "p" (there (here refl)) `in
       `call (`v "f" (here refl))
             (` Closure.Terms.⊆-term-lemma (there ∘ there ∘ there) (convertValue u) , `v "e" (there (here refl)))
-    convertCont (`go[ w' , t ] u) = `go-cc[ w' , `any ] (convertValue (`λ "y" ⦂ `Unit ⇒ CPS.Terms.⊆-cont-lemma there u ))
+    convertCont (`go[ w' ] u) = `go-cc[ w' ] (convertValue (`λ "y" ⦂ `Unit ⇒ CPS.Terms.⊆-cont-lemma there u ))
     -- Trivial cases
     convertCont (`if t `then u `else v) = `if convertValue t `then convertCont u `else convertCont v
     convertCont (`letcase x , y `= t `in u `or v) = `letcase x , y `= convertValue t `in convertCont u `or convertCont v
@@ -109,7 +107,6 @@ module CPStoClosure where
     convertCont (`put_`=_`in_ {m = m} u t v) = `put_`=_`in_ {m = convertMobile m} u (convertValue t) (convertCont v)
     convertCont (`let x `=fst t `in u) = `let x `=fst convertValue t `in convertCont u
     convertCont (`let x `=snd t `in u) = `let x `=snd convertValue t `in convertCont u
-    convertCont (`let x `=localhost`in t) = `let x `=localhost`in convertCont t
     convertCont (`let x `= t ⟨ w' ⟩`in u) = `let x `= convertValue t ⟨ w' ⟩`in convertCont u
     convertCont (`let_=`unpack_`=_`in_ x t u) = `let_=`unpack_`=_`in_ x (convertValue t) (λ ω → convertCont (u ω))
     convertCont `halt = `halt
@@ -148,4 +145,3 @@ module CPStoClosure where
     convertValue (`sham x) = `sham (λ ω → convertValue (x ω))
     convertValue (`Λ x) = `Λ (λ ω → convertValue (x ω))
     convertValue (`pack ω t) = `pack ω (convertValue t)
-    convertValue `any = `any

@@ -71,12 +71,9 @@ module ML5.Terms where
     -- ∃ terms
     `wpair : ∀ {w} {A : World → Type} (ω : World) → Γ ⊢ ↓ A ω < w > → Γ ⊢ ↓ `∃ A < w >
     `unpack_`=_`in_ : ∀ {w τ} {A : World → Type} (x : Id) → Γ ⊢ `∃ A < w > → ((ω : World) → ((x ⦂ A ω < w >) ∷ Γ) ⊢ τ < w >) → Γ ⊢ τ < w >
-    -- address terms
-    `localhost : ∀ {w} → Γ ⊢ ` w addr < w >
-    `any : ∀ {w w'} → Γ ⊢ ↓ ` w addr < w' >
     -- Other
     `val : ∀ {τ w} → Γ ⊢ ↓ τ < w > → Γ ⊢ τ < w >
-    `get : ∀ {τ w w'} {m : τ mobile} → Γ ⊢ ` w' addr < w > → Γ ⊢ τ < w' > → Γ ⊢ τ < w >
+    `get : ∀ {τ w w'} {m : τ mobile} → Γ ⊢ τ < w' > → Γ ⊢ τ < w >
     `put : ∀ {C σ w} {m : (C w) mobile} (u : Id) → Γ ⊢ C w < w > → ((u ∼ C) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
     -- Primitive imports
     `prim_`in_ : ∀ {h w σ} (x : Prim h) → (h ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >

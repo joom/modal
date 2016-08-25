@@ -55,7 +55,6 @@ module LiftedToJS where
     convertType (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType τ ) ∷ ("snd" , convertType σ) ∷ [])
     convertType (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType τ) ∷ ("inr" , convertType σ) ∷ [])
     convertType (` τ at w) = convertType τ
-    convertType ` x addr = `Object (("type" , `String) ∷ [])
     convertType (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
@@ -98,10 +97,9 @@ module LiftedToJS where
     convertCont w (`put u `= t `in t₁) = {!!}
     convertCont w (`let x `=fst t `in t₁) = {!!}
     convertCont w (`let x `=snd t `in t₁) = {!!}
-    convertCont w (`let x `=localhost`in t) = {!!}
     convertCont w (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
     convertCont w (`let_=`unpack_`=_`in_ x t x₁) = {!!}
-    convertCont w (`go-cc[ w' , t ] t₁) = {!!}
+    convertCont w (`go-cc[ w' ] t₁) = {!!}
     convertCont w (`call t t₁) = {!!}
     convertCont w `halt = {!!}
     convertCont {s = s} {s' = s'} client (`prim x `in t)
@@ -151,7 +149,6 @@ module LiftedToJS where
     convertValue (`sham x) = {!!}
     convertValue (`Λ x) = {!!}
     convertValue (`pack ω t) = {!!}
-    convertValue `any = `obj (("type" , `String , `string "addr") ∷ [])
     convertValue (`packΣ τ t) = {!!}
     convertValue (`buildEnv) = {!!}
 

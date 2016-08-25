@@ -26,7 +26,6 @@ module Closure.Types where
       `_cont : Type → Type
       `_×_ `_⊎_ : Type → Type → Type
       `_at_ : Type → World → Type
-      `_addr : World → Type
       `⌘ : (World → Type) → Type -- Shamrock
       `∀ `∃ : (World → Type) → Type
       `Σt[t×[_×t]cont] : Type → Type
@@ -53,7 +52,6 @@ module Closure.Types where
     `∀ᵐ : ∀ {A} → A mobile → (`∀ (λ _ → A)) mobile
     `∃ᵐ : ∀ {A} → A mobile → (`∃ (λ _ → A)) mobile
     `⌘ᵐ : ∀ {A} → (`⌘ (λ _ → A)) mobile
-    _addrᵐ : ∀ {w} → (` w addr) mobile
 
   -- Injectivity of constructors
   inj≡× : ∀ {σ σ′ τ τ′} → ` σ × τ ≡ ` σ′ × τ′ → (σ ≡ σ′) × (τ ≡ τ′)
@@ -75,8 +73,6 @@ module Closure.Types where
   inj≡∀ refl = refl
   inj≡∃ : ∀ {C D} → `∃ C ≡ `∃ D → C ≡ D
   inj≡∃ refl = refl
-  inj≡addr : ∀ {w w'} → ` w addr ≡ ` w' addr → w ≡ w'
-  inj≡addr refl = refl
 
   inj×ᵐ : ∀ {τ σ} → (` τ × σ) mobile → τ mobile × σ mobile
   inj×ᵐ (` x ×ᵐ y) = x , y
@@ -138,9 +134,6 @@ module Closure.Types where
     (` x at w) dec (` .x at .w) | yes refl | yes refl = yes refl
     ... | _ | no q = no (q ∘ proj₂ ∘ inj≡at)
     ... | no p | _ = no (p ∘ proj₁ ∘ inj≡at)
-    ` w addr dec ` w' addr with w decW w'
-    ... | yes p = yes (cong `_addr p)
-    ... | no q = no (q ∘ inj≡addr)
     `⌘ C dec `⌘ D = unFnDec C D `⌘ inj≡⌘
     `∀ C dec `∀ D = unFnDec C D `∀ inj≡∀
     `∃ C dec `∃ D = unFnDec C D `∃ inj≡∃
@@ -155,7 +148,6 @@ module Closure.Types where
     `Int dec (` _ × _) = no (λ ())
     `Int dec (` _ ⊎ _) = no (λ ())
     `Int dec (` _ at _) = no (λ ())
-    `Int dec ` _ addr = no (λ ())
     `Int dec `⌘ _ = no (λ ())
     `Int dec `∀ _ = no (λ ())
     `Int dec `∃ _ = no (λ ())
@@ -167,7 +159,6 @@ module Closure.Types where
     `Bool dec (` _ × _) = no (λ ())
     `Bool dec (` _ ⊎ _) = no (λ ())
     `Bool dec (` _ at _) = no (λ ())
-    `Bool dec ` _ addr = no (λ ())
     `Bool dec `⌘ _ = no (λ ())
     `Bool dec `∀ _ = no (λ ())
     `Bool dec `∃ _ = no (λ ())
@@ -179,7 +170,6 @@ module Closure.Types where
     `Unit dec (` _ × _) = no (λ ())
     `Unit dec (` _ ⊎ _) = no (λ ())
     `Unit dec (` _ at _) = no (λ ())
-    `Unit dec ` _ addr = no (λ ())
     `Unit dec `⌘ _ = no (λ ())
     `Unit dec `∀ _ = no (λ ())
     `Unit dec `∃ _ = no (λ ())
@@ -191,7 +181,6 @@ module Closure.Types where
     `String dec (` _ × _) = no (λ ())
     `String dec (` _ ⊎ _) = no (λ ())
     `String dec (` _ at _) = no (λ ())
-    `String dec ` _ addr = no (λ ())
     `String dec `⌘ _ = no (λ ())
     `String dec `∀ _ = no (λ ())
     `String dec `∃ _ = no (λ ())
@@ -203,7 +192,6 @@ module Closure.Types where
     ` _ cont dec (` _ × _) = no (λ ())
     ` _ cont dec (` _ ⊎ _) = no (λ ())
     ` _ cont dec (` _ at _) = no (λ ())
-    ` _ cont dec ` _ addr = no (λ ())
     ` _ cont dec `⌘ _ = no (λ ())
     ` _ cont dec `∀ _ = no (λ ())
     ` _ cont dec `∃ _ = no (λ ())
@@ -215,7 +203,6 @@ module Closure.Types where
     (` _ × _) dec ` _ cont = no (λ ())
     (` _ × _) dec (` _ ⊎ _) = no (λ ())
     (` _ × _) dec (` _ at _) = no (λ ())
-    (` _ × _) dec ` _ addr = no (λ ())
     (` _ × _) dec `⌘ _ = no (λ ())
     (` _ × _) dec `∀ _ = no (λ ())
     (` _ × _) dec `∃ _ = no (λ ())
@@ -227,7 +214,6 @@ module Closure.Types where
     (` _ ⊎ _) dec ` _ cont = no (λ ())
     (` _ ⊎ _) dec (` _ × _) = no (λ ())
     (` _ ⊎ _) dec (` _ at _) = no (λ ())
-    (` _ ⊎ _) dec ` _ addr = no (λ ())
     (` _ ⊎ _) dec `⌘ _ = no (λ ())
     (` _ ⊎ _) dec `∀ _ = no (λ ())
     (` _ ⊎ _) dec `∃ _ = no (λ ())
@@ -239,23 +225,10 @@ module Closure.Types where
     (` _ at _) dec ` _ cont = no (λ ())
     (` _ at _) dec (` _ × _) = no (λ ())
     (` _ at _) dec (` _ ⊎ _) = no (λ ())
-    (` _ at _) dec ` _ addr = no (λ ())
     (` _ at _) dec `⌘ _ = no (λ ())
     (` _ at _) dec `∀ _ = no (λ ())
     (` _ at _) dec `∃ _ = no (λ ())
     (` _ at _) dec `Σt[t×[_×t]cont] _ = no (λ ())
-    ` _ addr dec `Int = no (λ ())
-    ` _ addr dec `Bool = no (λ ())
-    ` _ addr dec `Unit = no (λ ())
-    ` _ addr dec `String = no (λ ())
-    ` _ addr dec ` y cont = no (λ ())
-    ` _ addr dec (` _ × _) = no (λ ())
-    ` _ addr dec (` _ ⊎ _) = no (λ ())
-    ` _ addr dec (` _ at _) = no (λ ())
-    ` _ addr dec `⌘ _ = no (λ ())
-    ` _ addr dec `∀ _ = no (λ ())
-    ` _ addr dec `∃ _ = no (λ ())
-    ` _ addr dec `Σt[t×[_×t]cont] _ = no (λ ())
     `⌘ _ dec `Int = no (λ ())
     `⌘ _ dec `Bool = no (λ ())
     `⌘ _ dec `Unit = no (λ ())
@@ -264,7 +237,6 @@ module Closure.Types where
     `⌘ _ dec (` _ × _) = no (λ ())
     `⌘ _ dec (` _ ⊎ _) = no (λ ())
     `⌘ _ dec (` _ at _) = no (λ ())
-    `⌘ _ dec ` _ addr = no (λ ())
     `⌘ _ dec `∀ _ = no (λ ())
     `⌘ _ dec `∃ _ = no (λ ())
     `⌘ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
@@ -276,7 +248,6 @@ module Closure.Types where
     `∀ _ dec (` _ × _) = no (λ ())
     `∀ _ dec (` _ ⊎ _) = no (λ ())
     `∀ _ dec (` _ at _) = no (λ ())
-    `∀ _ dec ` _ addr = no (λ ())
     `∀ _ dec `⌘ _ = no (λ ())
     `∀ _ dec `∃ _ = no (λ ())
     `∀ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
@@ -288,7 +259,6 @@ module Closure.Types where
     `∃ _ dec (` _ × _) = no (λ ())
     `∃ _ dec (` _ ⊎ _) = no (λ ())
     `∃ _ dec (` _ at _) = no (λ ())
-    `∃ _ dec ` _ addr = no (λ ())
     `∃ _ dec `⌘ _ = no (λ ())
     `∃ _ dec `∀ _ = no (λ ())
     `∃ _ dec `Σt[t×[_×t]cont] _ = no (λ ())
@@ -300,7 +270,6 @@ module Closure.Types where
     `Σt[t×[_×t]cont] _ dec (` _ × _) = no (λ ())
     `Σt[t×[_×t]cont] _ dec (` _ ⊎ _) = no (λ ())
     `Σt[t×[_×t]cont] _ dec (` _ at _) = no (λ ())
-    `Σt[t×[_×t]cont] _ dec ` _ addr = no (λ ())
     `Σt[t×[_×t]cont] _ dec `⌘ _ = no (λ ())
     `Σt[t×[_×t]cont] _ dec `∀ _ = no (λ ())
     `Σt[t×[_×t]cont] _ dec `∃ _ = no (λ ())
@@ -312,7 +281,6 @@ module Closure.Types where
     _dec_ (`Env _) (`_×_ _ _) = no (λ ())
     _dec_ (`Env _) (`_⊎_ _ _) = no (λ ())
     _dec_ (`Env _) (`_at_ _ _) = no (λ ())
-    _dec_ (`Env _) (`_addr _) = no (λ ())
     _dec_ (`Env _) (`⌘ _) = no (λ ())
     _dec_ (`Env _) (`∀ _) = no (λ ())
     _dec_ (`Env _) (`∃ _) = no (λ ())
@@ -325,7 +293,6 @@ module Closure.Types where
     (` _ × _) dec `Env _ = no (λ ())
     (` _ ⊎ _) dec `Env _ = no (λ ())
     (` _ at _) dec `Env _ = no (λ ())
-    ` _ addr dec `Env _ = no (λ ())
     `⌘ _ dec `Env _ = no (λ ())
     `∀ _ dec `Env _ = no (λ ())
     `∃ _ dec `Env _ = no (λ ())

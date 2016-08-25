@@ -85,7 +85,6 @@ module LambdaLifting where
     ... | n'' , ys , Φ , v = n'' , xs +++ ys , ++⁺ Δ Φ , `Λ (λ {client → ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) u ; server → ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ (++ʳ xs))) v})
     liftValue n (`pack ω t) with liftValue n t
     ... | n' , xs , Δ , t' = n' , xs , Δ , `pack ω t'
-    liftValue n `any = n , [] , [] , `any
     liftValue n (`packΣ τ t) with liftValue n t
     ... | n' , xs , Δ , t' = n' , xs , Δ , `packΣ τ t'
     liftValue n `buildEnv = n , [] , [] , `buildEnv
@@ -134,7 +133,6 @@ module LambdaLifting where
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , ++⁺ Δ Φ , `let x `=snd ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t'
       `in ⊆-cont-lemma (sub-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ (++ʳ xs)))) u'
-    liftCont {Γ} n (`let x `=localhost`in t) = n , [] , [] , `halt
     liftCont {Γ} n (`let x `= t ⟨ w' ⟩`in u) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , ++⁺ Δ Φ , `let x `= ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t'
@@ -154,8 +152,8 @@ module LambdaLifting where
     liftCont n `halt = n , [] , [] , `halt
     liftCont n (`prim x `in t) with liftCont n t
     ... | n' , xs , Δ , t' = n' , xs , Δ , `prim x `in t'
-    liftCont n (`go-cc[ w' , t ] u) with liftValue n u
-    ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' , `any ] u')
+    liftCont n (`go-cc[ w' ] u) with liftValue n u
+    ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' ] u')
     liftCont {Γ} n (`let τ , x `=unpack t `in u) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , ++⁺ Δ Φ ,

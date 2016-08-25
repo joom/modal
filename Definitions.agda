@@ -87,7 +87,6 @@ module Definitions where
   append-lh-⊆ : ∀ {l} {A : Set l} (xs ys zs : List A) → ys ⊆ zs → (xs +++ ys) ⊆ (xs +++ zs)
   append-lh-⊆ xs ys zs s =  Data.List.Any.Membership._++-mono_ {_}{_}{xs}{ys}{xs}{zs} id s
 
-  -- This was private in the stdlib.
   ++⁺ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} → All P xs → All P ys → All P (xs +++ ys)
   ++⁺ []         pys = pys
   ++⁺ (px ∷ pxs) pys = px ∷ ++⁺ pxs pys

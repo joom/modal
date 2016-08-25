@@ -40,7 +40,7 @@ module Example where
     `prim `version `in
     `prim `log `in
     (` `val (`vval "log" (here refl))
-     · `get {m = `Stringᵐ} (`val `any) (`val (`v "version" (there (here refl)))))
+     · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
 
   logVersionCPS : [] ⊢ₓ ⋆< client >
   logVersionCPS = ML5toCPS.convertExpr (λ v → `halt) logVersion
@@ -78,9 +78,9 @@ module Example where
     `prim `readFile `in
     `prim `alert `in
     (` `val (`v "alert" (here refl))
-     · `get {m = `Stringᵐ} (`val `any) (` `val (`v "readFile" (there (here refl)))
-                                        · `get {m = `Stringᵐ}(`val `any) (` `val (`v "prompt" (there (there (here refl))))
-                                                                          · `val (`string "Enter file name"))))
+     · `get {m = `Stringᵐ}  (` `val (`v "readFile" (there (here refl)))
+                             · `get {m = `Stringᵐ} (` `val (`v "prompt" (there (there (here refl))))
+                                                    · `val (`string "Enter file name"))))
 
   fileCPS : [] ⊢ₓ ⋆< client >
   fileCPS = convertExpr (λ v → `halt) file

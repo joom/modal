@@ -60,8 +60,6 @@ module CPS.Terms where
     `Λ : ∀ {w} {A : World → Type} → ((ω : World) → Γ ⊢ ↓ A ω < w >) → Γ ⊢ ↓ `∀ A < w >
     -- ∃ values
     `pack : ∀ {w} {A : World → Type} (ω : World) → Γ ⊢ ↓ A ω < w > → Γ ⊢ ↓ `∃ A < w >
-    -- Address values
-    `any : ∀ {w w'} → Γ ⊢ ↓ ` w addr < w' >
     -- Continuation expressions
     `if_`then_`else_ : ∀ {w} → Γ ⊢ ↓ `Bool < w > → Γ ⊢ ⋆< w > → Γ ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `letcase_,_`=_`in_`or_ : ∀ {τ σ w} → (x y : Id) → Γ ⊢ ↓ (` τ ⊎ σ) < w >
@@ -71,10 +69,9 @@ module CPS.Terms where
     `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `let_`=localhost`in_ : ∀ {w} → (x : Id) → ((x ⦂ ` w addr < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=_⟨_⟩`in_ : ∀ {C w} → (x : Id) → Γ ⊢ ↓ `∀ C < w > → (w' : World) → ((x ⦂ C w' < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_=`unpack_`=_`in_ : ∀ {w} {A : World → Type} (x : Id) → Γ ⊢ ↓ `∃ A < w > → ((ω : World) → ((x ⦂ A ω < w >) ∷ Γ) ⊢ ⋆< w >) → Γ ⊢ ⋆< w >
-    `go[_,_]_ : ∀ {w} → (w' : World) → Γ ⊢ ↓ ` w' addr < w > → Γ ⊢ ⋆< w' > → Γ ⊢ ⋆< w >
+    `go[_]_ : ∀ {w} → (w' : World) → Γ ⊢ ⋆< w' > → Γ ⊢ ⋆< w >
     `call : ∀ {τ w} → Γ ⊢ ↓ ` τ cont < w > → Γ ⊢ ↓ τ < w > → Γ ⊢ ⋆< w >
     `halt : ∀ {w} → Γ ⊢ ⋆< w >
     -- Primitive imports
@@ -97,11 +94,10 @@ module CPS.Terms where
     ⊆-cont-lemma s (`put_`=_`in_ {m = m} u t v) = `put_`=_`in_ {m = m} u (⊆-term-lemma s t) (⊆-cont-lemma (sub-lemma s) v)
     ⊆-cont-lemma s (`let x `=fst t `in u) = `let x `=fst (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`let x `=snd t `in u) = `let x `=snd (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
-    ⊆-cont-lemma s (`let x `=localhost`in t) = `let x `=localhost`in (⊆-cont-lemma (sub-lemma s) t)
     ⊆-cont-lemma s (`let x `= t ⟨ w' ⟩`in u) = `let x `= (⊆-term-lemma s t) ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma s) u
     ⊆-cont-lemma s (`let_=`unpack_`=_`in_ x t u) =
       `let_=`unpack_`=_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
-    ⊆-cont-lemma s (`go[ w' , t ] u) = `go[ w' , ⊆-term-lemma s t ] (⊆-cont-lemma s u)
+    ⊆-cont-lemma s (`go[ w' ] u) = `go[ w' ] (⊆-cont-lemma s u)
     ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
     ⊆-cont-lemma s `halt = `halt
     ⊆-cont-lemma s (`prim x `in t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t
@@ -128,4 +124,3 @@ module CPS.Terms where
     ⊆-term-lemma s (`sham x) = `sham (λ ω → ⊆-term-lemma s (x ω))
     ⊆-term-lemma s (`Λ x) = `Λ (λ ω → ⊆-term-lemma s (x ω))
     ⊆-term-lemma s (`pack ω t) = `pack ω (⊆-term-lemma s t)
-    ⊆-term-lemma s `any = `any
