@@ -137,11 +137,11 @@ module LambdaLifting where
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , ++⁺ Δ Φ , `let x `= ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t'
       ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ (++ʳ xs)))) u'
-    liftCont {Γ} n (`let_=`unpack_`=_`in_ x t u) with liftValue n t
+    liftCont {Γ} n (`let_=`unpack_`in_ x t u) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' (u client)
     ... | n'' , ys , Φ , u' with liftCont n'' (u server)
     ... | n''' , zs , Ψ , v' = n''' , xs +++ ys +++ zs , ++⁺ Δ (++⁺ Φ Ψ) ,
-      `let_=`unpack_`=_`in_ x (⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t')
+      `let_=`unpack_`in_ x (⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t')
       (λ {client → ⊆-cont-lemma (sub-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ((proj₂ (≡-⊆ (append-assoc xs ys zs))) ∘ _++-mono_ {_}{_}{ys}{[]}{xs +++ ys}{zs} (++ʳ xs) (λ ()) ∘ proj₂ (≡-⊆ (append-rh-[] _)))))) u' ;
           server → ⊆-cont-lemma (sub-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ((proj₂ (≡-⊆ (append-assoc xs ys zs))) ∘ ++ʳ (xs +++ ys))))) v'})
     liftCont {Γ} n (`call t u) with liftValue n t

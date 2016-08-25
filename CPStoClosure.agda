@@ -108,7 +108,7 @@ module CPStoClosure where
     convertCont (`let x `=fst t `in u) = `let x `=fst convertValue t `in convertCont u
     convertCont (`let x `=snd t `in u) = `let x `=snd convertValue t `in convertCont u
     convertCont (`let x `= t ⟨ w' ⟩`in u) = `let x `= convertValue t ⟨ w' ⟩`in convertCont u
-    convertCont (`let_=`unpack_`=_`in_ x t u) = `let_=`unpack_`=_`in_ x (convertValue t) (λ ω → convertCont (u ω))
+    convertCont (`let_=`unpack_`in_ x t u) = `let_=`unpack_`in_ x (convertValue t) (λ ω → convertCont (u ω))
     convertCont `halt = `halt
     convertCont (`prim x `in t) = `prim convertPrim x `in convertCont t
 

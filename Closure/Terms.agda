@@ -71,7 +71,7 @@ module Closure.Terms where
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=_⟨_⟩`in_ : ∀ {C w} → (x : Id) → Γ ⊢ ↓ `∀ C < w > → (w' : World) → ((x ⦂ C w' < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `let_=`unpack_`=_`in_ : ∀ {w} {A : World → Type} (x : Id) → Γ ⊢ ↓ `∃ A < w > → ((ω : World) → ((x ⦂ A ω < w >) ∷ Γ) ⊢ ⋆< w >) → Γ ⊢ ⋆< w >
+    `let_=`unpack_`in_ : ∀ {w} {A : World → Type} (x : Id) → Γ ⊢ ↓ `∃ A < w > → ((ω : World) → ((x ⦂ A ω < w >) ∷ Γ) ⊢ ⋆< w >) → Γ ⊢ ⋆< w >
     `call : ∀ {τ w} → Γ ⊢ ↓ ` τ cont < w > → Γ ⊢ ↓ τ < w > → Γ ⊢ ⋆< w >
     `halt : ∀ {w} → Γ ⊢ ⋆< w >
     -- Primitive imports
@@ -111,8 +111,8 @@ module Closure.Terms where
     ⊆-cont-lemma s (`let x `=fst t `in u) = `let x `=fst (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`let x `=snd t `in u) = `let x `=snd (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`let x `= t ⟨ w' ⟩`in u) = `let x `= (⊆-term-lemma s t) ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma s) u
-    ⊆-cont-lemma s (`let_=`unpack_`=_`in_ x t u) =
-      `let_=`unpack_`=_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
+    ⊆-cont-lemma s (`let_=`unpack_`in_ x t u) =
+      `let_=`unpack_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
     ⊆-cont-lemma s (`go-cc[ w' ] u) = `go-cc[ w' ] (⊆-term-lemma s u)
     ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
     ⊆-cont-lemma s `halt = `halt

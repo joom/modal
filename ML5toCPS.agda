@@ -122,7 +122,7 @@ module ML5toCPS where
       convertExpr' {s = s} (λ {Γ''}{s'} v → `lets x `= v `in convertExpr' {s = sub-lemma (s' ∘ s)} (λ {Γ'''}{s''} → K {Γ'''}{s'' ∘ there ∘ s'}) u) t
     convertExpr' {s = s} K (t ⟨ ω ⟩) = convertExpr' {s = s} (λ {Γ'}{s'} v → `let "x" `= v ⟨ ω ⟩`in K {s' = there ∘ s'} (`v "x" (here refl))) t
     convertExpr' {s = s} K (`unpack x `= t `in C) =
-      convertExpr' {s = s} (λ {_}{s'} v → `let_=`unpack_`=_`in_ x v
+      convertExpr' {s = s} (λ {_}{s'} v → `let_=`unpack_`in_ x v
                   (λ ω → convertExpr' {s = sub-lemma (s' ∘ s) } (λ {_}{s''} → K {_}{s'' ∘ there ∘ s'}) (C ω))) t
     convertExpr' {s = s} K (`val t) = K {s' = id} (convertValue' {s = s} t)
     convertExpr' {w = w}{s = s} K (`get {w' = w'}{m = m} t) =
