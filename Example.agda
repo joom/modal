@@ -3,7 +3,7 @@ module Example where
   open import Data.Bool
   open import Data.Nat hiding (erase)
   import Data.Unit
-  open import Data.Maybe
+  open import Data.Maybe hiding (All)
   open import Data.Product
   open import Data.Sum
   open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -11,8 +11,9 @@ module Example where
   open import Relation.Nullary.Decidable
   import Data.String
   open import Data.Nat.Show
-  open import Data.List hiding ([_])
+  open import Data.List hiding ([_]) renaming (_++_ to _+++_)
   open import Data.List.Any
+  open import Data.List.All
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Data.Vec
@@ -47,7 +48,8 @@ module Example where
   logVersionClosure : [] ⊢ₒ ⋆< client >
   logVersionClosure = CPStoClosure.convertCont logVersionCPS
 
-  logVersionLifting : List (Σ _ (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
+  logVersionLifting : Σ (List (Id × Typeₒ × World))
+                        (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × ([] +++ toCtx newbindings) ⊢ₒ ⋆< client >)
   logVersionLifting = LambdaLifting.entryPoint logVersionClosure
 
   logJS-test : Stm [] < client >

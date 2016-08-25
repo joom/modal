@@ -3,7 +3,7 @@ module Definitions where
   open import Data.Bool
   open import Data.Nat hiding (erase)
   import Data.Unit
-  open import Data.Maybe
+  open import Data.Maybe hiding (All)
   open import Data.Product
   open import Data.Sum
   open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -14,6 +14,7 @@ module Definitions where
   open import Data.List renaming (_++_ to _+++_)
   open import Data.List.Properties using (∷-injective)
   open import Data.List.Any
+  open import Data.List.All
   import Data.List.Any.Membership
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Vec hiding (_∈_)
@@ -43,7 +44,7 @@ module Definitions where
     client : World
     server : World
 
-  _decW_ : (w : World) → (w' : World) → Dec (w ≡ w')
+  _decW_ : (w w' : World) → Dec (w ≡ w')
   client decW client = yes refl
   server decW server = yes refl
   client decW server = no (λ ())
@@ -85,3 +86,8 @@ module Definitions where
 
   append-lh-⊆ : ∀ {l} {A : Set l} (xs ys zs : List A) → ys ⊆ zs → (xs +++ ys) ⊆ (xs +++ zs)
   append-lh-⊆ xs ys zs s =  Data.List.Any.Membership._++-mono_ {_}{_}{xs}{ys}{xs}{zs} id s
+
+  -- This was private in the stdlib.
+  ++⁺ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} → All P xs → All P ys → All P (xs +++ ys)
+  ++⁺ []         pys = pys
+  ++⁺ (px ∷ pxs) pys = px ∷ ++⁺ pxs pys
