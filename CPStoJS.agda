@@ -82,7 +82,7 @@ module CPStoJS where
     convertCont w (`let x `=fst t `in t₁) = {!!}
     convertCont w (`let x `=snd t `in t₁) = {!!}
     convertCont w (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
-    convertCont w (`let_=`unpack_`=_`in_ x t x₁) = {!!}
+    convertCont w (`let_=`unpack_`in_ x t x₁) = {!!}
     convertCont w (`go[ w' ] t₁) = {!!}
     convertCont w (`call t t₁) = {!!}
     convertCont w `halt = {!!}

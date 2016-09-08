@@ -86,7 +86,7 @@ module Closure.Terms where
                            → ((x ⦂ ` τ × ` (` σ × τ) cont < w >) ∷ Γ) ⊢ ⋆< w >
                            → Γ ⊢ ⋆< w >
     -- Environment terms
-    `buildEnv : ∀ {Δ w} → Γ ⊢ ↓ `Env Δ < w >
+    `buildEnv : ∀ {Δ w} → Δ ⊆ Γ → Γ ⊢ ↓ `Env Δ < w >
     `open_`in_ : ∀ {Δ w} → Γ ⊢ ↓ `Env Δ < w > → (Δ ++ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
 
   sub-lemma : ∀ {Γ Δ} {h : Hyp} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
@@ -146,4 +146,4 @@ module Closure.Terms where
     ⊆-term-lemma s (`Λ x) = `Λ (λ ω → ⊆-term-lemma s (x ω))
     ⊆-term-lemma s (`pack ω t) = `pack ω (⊆-term-lemma s t)
     ⊆-term-lemma s (`packΣ α t) = `packΣ α (⊆-term-lemma s t)
-    ⊆-term-lemma s (`buildEnv) = `buildEnv
+    ⊆-term-lemma s (`buildEnv pf) = `buildEnv (s ∘ pf)

@@ -114,7 +114,7 @@ module CPStoClosure where
 
     convertValue : ∀ {Γ τ w} → Γ ⊢ₓ ↓ τ < w > → (convertCtx Γ) ⊢ₒ ↓ (convertType τ) < w >
     -- Interesting cases
-    convertValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) = `packΣ (`Env (convertCtx Γ)) (` `buildEnv , (`λ "p" ⦂ _ ⇒ c))
+    convertValue {Γ}{_}{w} (`λ x ⦂ σ ⇒ t) = `packΣ (`Env (convertCtx Γ)) (` `buildEnv id , (`λ "p" ⦂ _ ⇒ c))
       where
         t' : convertCtx ((x ⦂ σ < w >) ∷ Γ) ⊢ₒ ⋆< w >
         t' = convertCont t

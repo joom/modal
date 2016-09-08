@@ -59,7 +59,11 @@ module LiftedToJS where
     convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`Σt[t×[_×t]cont] τ) =
-      `Object (("type" , `String) ∷ ("fst" , {!!}) ∷ ("snd" , `Function {!!} `Undefined) ∷ [])
+      `Object (("type" , `String)
+              ∷ ("fst" , {!!})
+              ∷ ("snd" , `Function (`Object (("type" , `String)
+                                            ∷ ("fst" , convertType τ )
+                                            ∷ ("snd" , {!!}) ∷ []) ∷ []) `Undefined) ∷ [])
     convertType (`Env Γ) = `Object (hypsToPair Γ)
 
   worldForType : Typeₒ → World → World
@@ -98,13 +102,13 @@ module LiftedToJS where
     convertCont w (`let x `=fst t `in t₁) = {!!}
     convertCont w (`let x `=snd t `in t₁) = {!!}
     convertCont w (`let x `= t ⟨ w' ⟩`in t₁) = {!!}
-    convertCont w (`let_=`unpack_`=_`in_ x t x₁) = {!!}
+    convertCont w (`let_=`unpack_`in_ x t x₁) = {!!}
     convertCont w (`go-cc[ w' ] t₁) = {!!}
     convertCont w (`call t t₁) = {!!}
-    convertCont w `halt = {!!}
+    convertCont w `halt = {!`nop , `nop!}
     convertCont {s = s} {s' = s'} client (`prim x `in t)
       with convertCont {s = {!!}} {s' = s'} client t
-    ... | a , b = {!`prim (convertPrim x) ； a!} , b
+    ... | a , b = (`prim (convertPrim x) ； a) , b
     convertCont server (`prim x `in t) = {!!}
     convertCont w (`let τ , x `=unpack v `in t) = {!!}
     convertCont w (`open t `in u) = {!!}
@@ -145,12 +149,12 @@ module LiftedToJS where
     convertValue (`inr t `as τ) = `obj (("type" , `String , `string "or") ∷
                                         ("dir" , `String , `string "inr") ∷
                                         ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , convertValue t) ∷ [])
-    convertValue (`hold t) = {!!}
+    convertValue (`hold t) = {!convertValue t!}
     convertValue (`sham x) = {!!}
     convertValue (`Λ x) = {!!}
     convertValue (`pack ω t) = {!!}
     convertValue (`packΣ τ t) = {!!}
-    convertValue (`buildEnv) = {!!}
+    convertValue {Γ} (`buildEnv {Δ} pf) = {!!}
 
   -- entryPoint : [] ⊢ₒ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
   -- entryPoint t with convertCont {s = {!!} }{s' = {!!}} client t

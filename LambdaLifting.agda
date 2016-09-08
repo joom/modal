@@ -87,7 +87,7 @@ module LambdaLifting where
     ... | n' , xs , Δ , t' = n' , xs , Δ , `pack ω t'
     liftValue n (`packΣ τ t) with liftValue n t
     ... | n' , xs , Δ , t' = n' , xs , Δ , `packΣ τ t'
-    liftValue n `buildEnv = n , [] , [] , `buildEnv
+    liftValue n (`buildEnv pf) = n , [] , [] , `buildEnv (proj₂ (≡-⊆ (append-rh-[] _)) ∘ pf)
 
     -- Hint: maybe we can use this to prove complex subset holes.
     -- concat-mono {xss = Γ ∷ Δ ∷ []} {yss = Γ ∷ Δ ∷ Φ ∷ Ψ ∷ []}
