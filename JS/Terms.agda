@@ -77,7 +77,7 @@ module JS.Terms where
     data FnStm_⇓_⦂_<_> : Context → Context → Maybe Type → World → Set where
       `nop : ∀ {Γ w mσ} → FnStm Γ ⇓ Γ ⦂ mσ < w >
       `exp : ∀ {Γ τ w mσ} → Γ ⊢ τ < w > → FnStm Γ ⇓ Γ ⦂ mσ < w >
-      `var : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → id ⦂ τ < w > ∉ Γ → FnStm Γ ⇓ (id ⦂ τ < w > ∷ Γ) ⦂ mσ < w >
+      `var : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → FnStm Γ ⇓ (id ⦂ τ < w > ∷ Γ) ⦂ mσ < w >
       `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ Γ → FnStm Γ ⇓ Γ ⦂ mσ < w >
       _；return_ : ∀ {Γ Γ' τ w} → FnStm Γ ⇓ Γ' ⦂ nothing < w > → Γ' ⊢ τ < w > → FnStm Γ ⇓ Γ' ⦂ (just τ) < w >
       _；_ : ∀ {Γ Γ' Γ'' w mσ} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → FnStm Γ' ⇓ Γ'' ⦂ mσ < w > → FnStm Γ ⇓ Γ'' ⦂ mσ < w >
@@ -102,3 +102,68 @@ module JS.Terms where
       pf = trans (sym (Data.List.Properties.map-compose fields)) (Data.List.Properties.map-id fields)
       tEq : Γ ⊢ (`Object ((Data.List.map toTypePair ∘ Data.List.map f) fields) < w >) ≡ Γ ⊢ (`Object fields < w >)
       tEq = cong (λ x → Γ ⊢ `Object x < w >) pf
+
+  {-# NON_TERMINATING #-}
+  mutual
+  -- Weakening lemma
+    ⊆-exp-lemma : ∀ {Γ Γ' τ w} → Γ ⊆ Γ' → Γ ⊢ τ < w > → Γ' ⊢ τ < w >
+    ⊆-exp-lemma s (`string x) = `string x
+    ⊆-exp-lemma s `undefined = `undefined
+    ⊆-exp-lemma s `true = `true
+    ⊆-exp-lemma s `false = `false
+    ⊆-exp-lemma s (` t ∧ u) = ` ⊆-exp-lemma s t ∧ ⊆-exp-lemma s u
+    ⊆-exp-lemma s (` t ∨ u) = ` ⊆-exp-lemma s t ∨ ⊆-exp-lemma s u
+    ⊆-exp-lemma s (`¬ t) = `¬ ⊆-exp-lemma s t
+    ⊆-exp-lemma s (`n x) = `n x
+    ⊆-exp-lemma s (` t ≤ u) = ` ⊆-exp-lemma s t ≤ ⊆-exp-lemma s u
+    ⊆-exp-lemma s (` t + u) = ` ⊆-exp-lemma s t + ⊆-exp-lemma s u
+    ⊆-exp-lemma s (` t * u) = ` ⊆-exp-lemma s t * ⊆-exp-lemma s u
+    ⊆-exp-lemma s (`v x ∈) = `v x (s ∈)
+    ⊆-exp-lemma s ((` t · termVec) x) = (` ⊆-exp-lemma s t · Data.Vec.map (λ { (υ , u) → (υ , ⊆-exp-lemma s u) }) termVec) {!x!}
+    ⊆-exp-lemma s (`λ ids ⇒ x) = `λ ids ⇒ {!!}
+    ⊆-exp-lemma s (`obj terms) = {!`obj ?!}
+    ⊆-exp-lemma s (`proj t key x) = `proj (⊆-exp-lemma s t) key x
+    ⊆-exp-lemma s (`vval u ∈) = `vval u (s ∈)
+
+    ⊆-stm-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Stm Γ < w > → Stm Γ' < w >
+    ⊆-stm-lemma s (`exp x) = `exp (⊆-exp-lemma s x)
+
+    ⊆-fnstm-lemma : ∀ {Γ Γ' mσ w} → Γ ⊆ Γ' → Σ _ (λ Δ → FnStm Γ ⇓ Δ ⦂ mσ < w >) → Σ _ (λ Δ' → FnStm Γ' ⇓ Δ' ⦂ mσ < w >)
+    ⊆-fnstm-lemma s (Γ , `nop) = _ , `nop
+    ⊆-fnstm-lemma s (Γ , `exp x) = _ , `exp (⊆-exp-lemma s x)
+    ⊆-fnstm-lemma s (_ , `var id t) = _ , `var id (⊆-exp-lemma s t)
+    ⊆-fnstm-lemma s (Γ , `assign id t x) = _ , `assign id (⊆-exp-lemma s t) (s x)
+    ⊆-fnstm-lemma s (Γ' , (t ；return x)) with ⊆-fnstm-lemma s (_ , t)
+    ... | Γ'' , t' = Γ'' , (t' ；return ⊆-exp-lemma {!!} x)
+    -- ⊆-fnstm-lemma {Γ}{Δ} s (Γ'' , (_；_ {Γ' = Γ'} t u)) with ⊆-fnstm-lemma s (Γ' , t)
+    -- ... | (Δ' , t' , s') with ⊆-fnstm-lemma s' (Γ'' , u)
+    -- ... | (Δ'' , u' , s'') = Δ'' , (t' ； u') , s''
+    ⊆-fnstm-lemma s (Γ'' , (_；_ {Γ}{Γ'} t u)) with ⊆-fnstm-lemma {!!} (Γ' , t)
+    ... | xs , t' with ⊆-fnstm-lemma {!!} (Γ'' , u)
+    ... | ys , u' = {!!}
+    -- with ⊆-fnstm-lemma s (_ , t) | ⊆-fnstm-lemma {!s!} (_ , u)
+    -- ... | xs , t' | ys , u' = {!!}
+    ⊆-fnstm-lemma s (Γ' , (`if x `then t `else u)) with ⊆-fnstm-lemma s (_ , t) | ⊆-fnstm-lemma s (_ , u)
+    ... | xs , t' | ys , u' = {!!} , (`if ⊆-exp-lemma s x `then {!!} `else {!!})
+    ⊆-fnstm-lemma s (_ , `prim x) = _ , `prim x
+
+    ⊆-fnstm-lemma' : ∀ {Γ Γ' mσ w} → Γ ⊆ Γ'
+                   → (t : Σ _ (λ Δ → FnStm Γ ⇓ Δ ⦂ mσ < w >))
+                   → Σ _ (λ Δ' → FnStm Γ' ⇓ Δ' ⦂ mσ < w > × (proj₁ t) ⊆ Δ')
+    ⊆-fnstm-lemma' s (Γ , `nop) = _ , `nop , s
+    ⊆-fnstm-lemma' s (Γ , `exp x) = _ , `exp (⊆-exp-lemma s x) , s
+    ⊆-fnstm-lemma' s (_ , `var id t) = _ , `var id (⊆-exp-lemma s t) , sub-lemma s
+    ⊆-fnstm-lemma' s (Γ , `assign id t x) = _ , `assign id (⊆-exp-lemma s t) (s x) , s
+    ⊆-fnstm-lemma' s (Γ' , (t ；return x)) with ⊆-fnstm-lemma' s (Γ' , t)
+    ... | (Δ' , t' , s') = Δ' , (t' ；return ⊆-exp-lemma s' x) , s'
+    ⊆-fnstm-lemma' {Γ}{Δ} s (Γ'' , (_；_ {Γ' = Γ'} t u)) with ⊆-fnstm-lemma' s (Γ' , t)
+    ... | (Δ' , t' , s') with ⊆-fnstm-lemma' s' (Γ'' , u)
+    ... | (Δ'' , u' , s'') = Δ'' , (t' ； u') , s''
+    ⊆-fnstm-lemma' s (Δ , (`if x `then t `else u)) with ⊆-fnstm-lemma' s (Δ , t)
+    ... | (Δ' , t' , s') with ⊆-fnstm-lemma' s (Δ , u)
+    ... | (Δ'' , u' , s'') with reconcile Δ Δ' Δ'' s' s''
+    ... | (Δ''' , s''' , s'''') = {!!}
+    -- ⊆-fnstm-lemma' s (Γ' , (`if x `then t `else u)) with ⊆-fnstm-lemma' s (Γ' , t)
+    -- ... | (Δ' , t' , s') with ⊆-fnstm-lemma' {!!} (Γ' , u)
+    -- ... | (Δ'' , u' , s'') = Δ'' , (`if ⊆-exp-lemma {!!} x `then {!t'!} `else u') , s''
+    ⊆-fnstm-lemma' s (_ , `prim x) = _ , `prim x , sub-lemma s

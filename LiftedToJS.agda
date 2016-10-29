@@ -162,8 +162,15 @@ module LiftedToJS where
   --     (`exp ((` `λ [] ⇒ (`prim `socket ； a ；return `undefined) · []) refl))
   --   , (`exp ((` `λ [] ⇒ (`prim `io ； b ；return `undefined) · []) refl))
 
-  convertLambda : ∀ {Γ mσ} → (id : Id) (τ : Typeₒ) (w : World) → [] ⊢ₒ ↓ τ < w > → FnStm Γ ⇓ ({!!} ∷ Γ) ⦂ mσ < w >
-  convertLambda = {!!}
+  convertλ : ∀ {Γ mσ} → (id : Id) (τ : Typeₒ) (w : World) → [] ⊢ₒ ↓ τ < w > → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ Γ) ⦂ mσ < w >
+  convertλ id τ w t with convertValue t
+  ... | t' = `var id {!t!} {!!}
+
+  convertλs : ∀ {Γ Δ mτ mσ}
+            → List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >}))
+            → (FnStm [] ⇓ Γ ⦂ mτ < client >) × (FnStm [] ⇓ Δ ⦂ mσ < server >)
+  convertλs [] = {!`exp!} , {!`exp!}
+  convertλs (((id , σ , w') , t) ∷ xs) = {!!}
 
   entryPoint : List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
              → (Stm [] < client >) × (Stm [] < server >)

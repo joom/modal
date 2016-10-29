@@ -71,7 +71,7 @@ module JS.Source where
     fnStmSource : ∀ {Γ Γ' mσ w} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → String
     fnStmSource `nop = ""
     fnStmSource (`exp x) = termSource x ++ ";"
-    fnStmSource (`var id t x) = "var " ++ id ++ " = " ++ termSource t
+    fnStmSource (`var id t) = "var " ++ id ++ " = " ++ termSource t
     fnStmSource (`assign id t x) = id ++ " = " ++ termSource t
     fnStmSource (s ；return x) = fnStmSource s ++ ";\nreturn " ++ termSource x ++ ";"
     fnStmSource (s₁ ； s₂) = fnStmSource s₁ ++ ";\n" ++ fnStmSource s₂

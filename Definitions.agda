@@ -90,3 +90,7 @@ module Definitions where
   ++⁺ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} → All P xs → All P ys → All P (xs +++ ys)
   ++⁺ []         pys = pys
   ++⁺ (px ∷ pxs) pys = px ∷ ++⁺ pxs pys
+
+  sub-lemma : ∀ {l} {A : Set l} {Γ Δ : List A} {h : A} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
+  sub-lemma s (here refl) = here refl
+  sub-lemma s (there i) = there (s i)
