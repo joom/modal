@@ -123,7 +123,7 @@ module CPStoClosure where
         c = `let "env" `=snd `v "p" (here refl) `in
             `open `v "env" (here refl) `in
             `let x `=fst `v "p" (++ʳ (convertCtx Γ) (there (here refl))) `in
-            (Closure.Terms.⊆-cont-lemma (Closure.Terms.sub-lemma ++ˡ) t')
+            (Closure.Terms.⊆-cont-lemma (sub-lemma ++ˡ) t')
     -- Trivial cases
     convertValue `tt = `tt
     convertValue (`string x) = `string x

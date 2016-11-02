@@ -5,7 +5,7 @@ module JS.Source where
   open import Data.Integer
   open import Data.Nat hiding (erase)
   import Data.Unit
-  open import Data.Maybe
+  open import Data.Maybe hiding (All)
   open import Data.Product
   open import Data.Sum
   open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -15,6 +15,7 @@ module JS.Source where
   open import Data.Nat.Show
   open import Data.List hiding ([_] ; zipWith ; _++_)
   open import Data.List.Any
+  open import Data.List.All
   open Membership-≡
   open import Data.Vec hiding (_∈_ ; _++_)
   open import Data.Fin
@@ -44,10 +45,14 @@ module JS.Source where
     termSource (` t * u) = termSource t ++ " * " ++ termSource u
     termSource (`v id ∈) = id
     termSource (`vval {w}{C} u ∈) = u
-    termSource ((` f · args) x) =
-      termSource f ++ "(" ++ concatStr (intersperse ", " (Data.Vec.toList (Data.Vec.map (λ {(τ , t) → termSource t}) args))) ++ ")"
+    termSource {Γ} (`_·_ {argTypes}{_}{w} f args) =
+        termSource f ++ "(" ++ concatStr (intersperse ", " (argsSource argTypes args)) ++ ")"
+      where
+        argsSource : (xs : List Type) → All (λ σ → Γ ⊢ σ < w >) xs → List String
+        argsSource [] [] = []
+        argsSource (x ∷ xs) (px ∷ ts) = termSource px ∷ argsSource xs ts
     termSource (`λ ids ⇒ t) =
-      "(function (" ++ concatStr (intersperse ", " (Data.Vec.toList ids)) ++ ") {\n" ++ fnStmSource t ++ "\n})"
+      "(function (" ++ concatStr (intersperse ", " ids) ++ ") {\n" ++ fnStmSource t ++ "\n})"
     termSource (`obj terms) =
       "{" ++ concatStr (intersperse ", " (Data.List.map (λ {(id , _ , t) → "\"" ++ id ++ "\" : " ++ termSource t }) terms)) ++ "}"
     termSource (`proj t key x) = "(" ++ termSource t ++ ")[\"" ++ key ++ "\"]"

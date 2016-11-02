@@ -16,7 +16,6 @@ module Example where
   open import Data.List.All
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
-  open import Data.Vec
   open import Function
   open import Data.String
   open import IO
@@ -54,18 +53,17 @@ module Example where
 
   logJS-test : Stm [] < client >
   logJS-test =
-    `exp ((` (`λ [] ⇒ (
+    `exp (` (`λ [] ⇒ (
       `prim `alert ；
       `prim `socket ；
-      `exp ((` `proj (`v "socket" (here refl)) "on" (here refl)
-             · ((_ , `string "version") ∷ ((_ , (`λ "v" ∷ [] ⇒ (`exp ((` `v "alert" (there (there (here refl)))
-                                                                        · ((_ , `obj (("type" , _ , `string "and") ∷
-                                                                                       ("fst" , _ , `v "v" (here refl)) ∷
-                                                                                       ("snd" , _ , (`λ "a" ∷ [] ⇒ (`exp `undefined ；return `undefined)))
-                                                                                       ∷ [])) ∷ [])) refl) ；return `undefined))) ∷ []))) refl)
+      `exp (` `proj (`v "socket" (here refl)) "on" (here refl)
+            · (`string "version" ∷ (`λ "v" ∷ [] ⇒ (`exp (` `v "alert" (there (there (here refl)))
+                                                          · (`obj (("type" , _ , `string "and") ∷
+                                                                   ("fst" , _ , `v "v" (here refl)) ∷
+                                                                   ("snd" , _ , (`λ "a" ∷ [] ⇒ (`exp `undefined ；return `undefined)))
+                                                                   ∷ []) ∷ [])) ；return `undefined) ∷ [])))
     ；return `undefined
-    )) · []) refl)
-
+    )) · [])
 
   logJS-test-source : String
   logJS-test-source = stmSource logJS-test

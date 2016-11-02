@@ -94,3 +94,7 @@ module Definitions where
   sub-lemma : ∀ {l} {A : Set l} {Γ Δ : List A} {h : A} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
   sub-lemma s (here refl) = here refl
   sub-lemma s (there i) = there (s i)
+
+  sub-lemma-list : ∀ {l} {A : Set l} {Γ Δ : List A} {γ : List A} → Γ ⊆ Δ → (γ +++ Γ) ⊆ (γ +++ Δ)
+  sub-lemma-list {γ = []} s = s
+  sub-lemma-list {γ = x ∷ xs} s = sub-lemma (sub-lemma-list {γ = xs} s)

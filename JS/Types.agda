@@ -22,7 +22,7 @@ module JS.Types where
 
   data Type : Set where
     `Undefined `Bool `Number `String : Type
-    `Function : ∀ {n} → Vec Type n → Type → Type
+    `Function : List Type → Type → Type
     `Object : List (Id × Type) → Type
 
   data Hyp : Set where
