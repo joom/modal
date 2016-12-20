@@ -11,9 +11,8 @@ module JS.Types where
   open import Relation.Nullary.Decidable
   import Data.String
   open import Data.Nat.Show
-  open import Data.List hiding ([_])
+  open import Data.List
   open import Data.List.Any
-  open import Data.Vec
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
@@ -27,7 +26,7 @@ module JS.Types where
 
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
-    _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
+    -- _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
 
   data Conc : Set where
     _<_> : (τ : Type) (w : World) → Conc -- Expression

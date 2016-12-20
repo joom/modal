@@ -1,4 +1,4 @@
-module Closure.Types where
+module LiftedMonomorphic.Types where
 
   open import Data.Bool
   open import Data.Nat hiding (erase)
@@ -33,7 +33,6 @@ module Closure.Types where
 
     data Hyp : Set where
       _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
-      _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
 
   data Conc : Set where
     ⋆<_> : (w : World) → Conc -- Well-formed continuation
@@ -81,8 +80,6 @@ module Closure.Types where
 
   inj≡⦂ : ∀ {x x' τ τ' w w'} → x ⦂ τ < w > ≡ x' ⦂ τ' < w' > → (x ≡ x') × (τ ≡ τ') × (w ≡ w')
   inj≡⦂ refl = refl , refl , refl
-  inj≡∼ : ∀ {u u' C C'} → u ∼ C ≡ u' ∼ C' → (u ≡ u') × (C ≡ C')
-  inj≡∼ refl = refl , refl
 
   mutual
     -- We can do this because there are a finite number of worlds in
@@ -304,12 +301,6 @@ module Closure.Types where
     ... | no  p | _     | _     = no (p ∘ proj₁ ∘ inj≡⦂)
     ... | _     | no  q | _     = no (q ∘ (proj₁ ∘ proj₂) ∘ inj≡⦂)
     ... | _     | _     | no  r = no (r ∘ (proj₂ ∘ proj₂) ∘ inj≡⦂)
-    (u ∼ C) decHyp (v ∼ D) with u Data.String.≟ v | C decW→T D
-    ... | yes p | yes q = yes (cong₂ _∼_ p q)
-    ... | no  p | _     = no (p ∘ proj₁ ∘ inj≡∼)
-    ... | _     | no  q = no (q ∘ proj₂ ∘ inj≡∼)
-    (_ ⦂ _ < _ >) decHyp (_ ∼ _) = no (λ ())
-    (_ ∼ _) decHyp (_ ⦂ _ < _ >) = no (λ ())
 
     -- Monomorphic instance of Definitions.listDec
     -- Included here to make it obvious to Agda that it terminates.

@@ -12,9 +12,9 @@ module LiftedToJS where
   open import Relation.Nullary.Negation using (contraposition)
   open import Data.String using (_++_)
   open import Data.Nat.Show
-  open import Data.List hiding ([_]) renaming (_++_ to _+++_)
+  open import Data.List renaming (_++_ to _+++_)
   open import Data.List.Any
-  open import Data.Vec
+  import Data.List.All
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
   open import Function
@@ -33,6 +33,9 @@ module LiftedToJS where
   isCont : Concₒ → Set
   isCont ⋆< _ > = Data.Unit.⊤
   isCont ↓ _ < _ > = ⊥
+
+  tripleToHyp : Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >}) → Hypₒ
+  tripleToHyp ((id , σ , w) , t) = id ⦂ σ < w >
 
   mutual
     -- Taking advantage of that we only have two worlds here.
@@ -70,30 +73,38 @@ module LiftedToJS where
   worldForType (` τ at w) _ = w
   worldForType _ w = w
 
-  convertHyp : Hypₒ → Hypⱼ
-  convertHyp (x ⦂ τ < w >) = x ⦂ convertType τ < worldForType τ w >
-  convertHyp (u ∼ x) = u ∼ (λ ω → convertType (x ω))
+  convertHyp : World → Hypₒ → Hypⱼ
+  convertHyp _ (x ⦂ τ < w >) = x ⦂ convertType τ < worldForType τ w >
+  convertHyp w (u ∼ C) = u ⦂ convertType (C w) < w >
 
-  convertCtx : Contextₒ → Contextⱼ
-  convertCtx = Data.List.map convertHyp
+  convertCtx : World → Contextₒ → Contextⱼ
+  -- convertCtx w = Data.List.map (convertHyp w)
+  convertCtx w [] = []
+  convertCtx w (h ∷ hs) with h
+  ... | _ ⦂ _ < _ > = convertHyp w h ∷ convertCtx w hs
+  ... | _ ∼ _ = convertHyp client h ∷ convertHyp server h ∷ convertCtx w hs
 
-  convertPrim : ∀ {h} → Closure.Terms.Prim h → JS.Terms.Prim (convertHyp h)
-  convertPrim = {!!}
-  -- convertPrim `alert = `alert
-  -- convertPrim `version = `version
-  -- convertPrim `log = `log
-  -- convertPrim `prompt = `prompt
-  -- convertPrim `readFile = `readFile
+  convertPrim : ∀ {h} → (w : World) → Closure.Terms.Prim h → JS.Terms.Prim (convertHyp w h)
+  convertPrim w `alert = {!!}
+  convertPrim w `version = {!!}
+  convertPrim client `log = {!!}
+  convertPrim server `log = {!!}
+  convertPrim w `prompt = {!!}
+  convertPrim w `readFile = {!!}
 
   mutual
-    convertCont : ∀ {Γ Δ Δ' Φ Φ' mσ}
-                → {s : Δ ⊆ Δ'} {s' : Φ ⊆ Φ'}
+    convertCont : ∀ {Γ Δ Φ mσ}
                 → (w : World)
                 → Γ ⊢ₒ ⋆< w >
-                → FnStm Δ ⇓ Δ' ⦂ mσ < client > × FnStm Φ ⇓ Φ' ⦂ mσ < server >
-    convertCont {s = s} {s' = s'} client (`if t `then u `else v)
-      with convertCont {s = s} {s' = s'} client u | convertCont {s = {!s!}} {s' = {!!}} client v
-    ... | a , b | c , d = (`if {!convertValue t!} `then a `else c) , (b ； d)
+                → Σ _ (λ δ → FnStm Δ ⇓ δ ⦂ mσ < client >) × Σ _ (λ φ → FnStm Φ ⇓ φ ⦂ mσ < server >)
+                -- → FnStm Δ ⇓ δ ⦂ mσ < client > × FnStm Φ ⇓ φ ⦂ mσ < server >
+    convertCont {Γ}{Δ}{Φ}{mσ} client (`if t `then u `else v)
+      with convertCont {Γ}{Δ}{Φ} client u | convertCont {Γ}{Δ}{Φ} client v
+    ... | (δ , a) , (φ , b) | (δ' , c) , (φ' , d) =
+        ({!!} , (`if {!convertValue t!} `then {!a!} `else {!c!} ))
+      , (φ' +++ φ , ((b ； ⊆-fnstm-lemma {!!} d)))
+
+    -- (`if {!convertValue t!} `then a `else c) , (b ； d)
     convertCont server (`if t `then u `else v) = {!!}
     convertCont w (`letcase x , y `= t `in t₁ `or t₂) = {!!}
     convertCont w (`leta x `= t `in t₁) = {!!}
@@ -105,28 +116,16 @@ module LiftedToJS where
     convertCont w (`let_=`unpack_`in_ x t x₁) = {!!}
     convertCont w (`go-cc[ w' ] t₁) = {!!}
     convertCont w (`call t t₁) = {!!}
-    convertCont w `halt = {!`nop , `nop!}
-    convertCont {s = s} {s' = s'} client (`prim x `in t)
-      with convertCont {s = {!!}} {s' = s'} client t
-    ... | a , b = (`prim (convertPrim x) ； a) , b
+    convertCont w `halt = ([] , `nop) , ([] , `nop)
+    convertCont client (`prim x `in t) = {!!}
+    -- convertCont {s = s} {s' = s'} client (`prim x `in t)
+    --   with convertCont {s = {!!}} {s' = s'} client t
+    -- ... | a , b = (`prim (convertPrim x) ； a) , b
     convertCont server (`prim x `in t) = {!!}
     convertCont w (`let τ , x `=unpack v `in t) = {!!}
     convertCont w (`open t `in u) = {!!}
 
-    -- convertCont {s = s} {s' = s'} (`if t `then u `else v) client
-    --   with convertCont {s = s} {s' = s'} u client | convertCont {s = s} {s' = {!s'!}} v client
-    -- ... | a , b | c , d = (`if {!convertValue t!} `then a `else c) , (b ； d)
-    -- convertCont (`if t `then u `else v) server = {!!}
-    -- convertCont {mσ = mσ} `halt client = {!`exp `undefined ；return ?!} , {!`exp `undefined!}
-    -- convertCont `halt server = {!`exp `undefined!} , {!`exp `undefined ；return ?!}
-    -- convertCont {s = s} {s' = s'} (`prim x `in t) client
-    --   with convertCont {s = s} {s' = s'} t client
-    -- ... | a , b = {!`prim (convertPrim x) ； a!} , b
-    -- convertCont {s = s} {s' = s'} (`prim x `in t) server
-    -- with convertCont {s = s} {s' = s'} t server
-    -- ... | a , b = a , {!`prim (convertPrim x) ； b!}
-
-    convertValue : ∀ {Γ τ w} → Γ ⊢ₒ ↓ τ < w > → (convertCtx Γ) ⊢ⱼ (convertType τ) < w >
+    convertValue : ∀ {Γ τ w} → Γ ⊢ₒ ↓ τ < w > → (convertCtx w Γ) ⊢ⱼ (convertType τ) < w >
     convertValue `tt = `obj (("type" , `String , `string "unit") ∷ [])
     convertValue (`string s) = `string s
     convertValue `true = `true
@@ -139,7 +138,7 @@ module LiftedToJS where
     convertValue (` t + u) =  ` (convertValue t) + (convertValue u)
     convertValue (` t * u) =  ` (convertValue t) * (convertValue u)
     convertValue (`v id ∈) = `v id {!!}
-    convertValue (`vval u x) = {!!}
+    convertValue (`vval u x) = `v u {!!}
     convertValue (`λ x ⦂ σ ⇒ t) = `λ x ∷ [] ⇒ {!convertCont ? ?!}
     convertValue (` t , u) = `obj (("type" , `String , `string "and") ∷
                                     ("fst" , _ , convertValue t) ∷ ("snd" , _ , convertValue u) ∷ [])
@@ -156,22 +155,38 @@ module LiftedToJS where
     convertValue (`packΣ τ t) = {!!}
     convertValue {Γ} (`buildEnv {Δ} pf) = {!!}
 
-  -- entryPoint : [] ⊢ₒ ⋆< client > → (Stm [] < client >) × (Stm [] < server >)
-  -- entryPoint t with convertCont {s = {!!} }{s' = {!!}} client t
-  -- ... | a , b =
-  --     (`exp ((` `λ [] ⇒ (`prim `socket ； a ；return `undefined) · []) refl))
-  --   , (`exp ((` `λ [] ⇒ (`prim `io ； b ；return `undefined) · []) refl))
+  convertλ : ∀ {Γ mσ} → (id : Id) (τ : Typeₒ) (w : World) → [] ⊢ₒ ↓ τ < w > → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ []) ⦂ mσ < w >
+  convertλ id τ w t = `var id (⊆-exp-lemma (λ ()) (convertValue t))
 
-  convertλ : ∀ {Γ mσ} → (id : Id) (τ : Typeₒ) (w : World) → [] ⊢ₒ ↓ τ < w > → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ Γ) ⦂ mσ < w >
-  convertλ id τ w t with convertValue t
-  ... | t' = `var id {!t!} {!!}
+  convertλs : ∀ {mτ mσ}
+            → (lifted : List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})))
+            → Σ _ (λ Γ → FnStm [] ⇓ Γ ⦂ mτ < client >) × Σ _ (λ Δ → FnStm [] ⇓ Δ ⦂ mσ < server >)
+  convertλs [] = ([] , `nop) , ([] , `nop)
+  convertλs {mτ}{mσ} (((id , σ , client) , t) ∷ xs) with convertλ {[]}{mτ} id σ client t | convertλs {mτ}{mσ} xs
+  ... | fnStm | (Γ' , cliFnStm) , (Δ' , serFnStm) = (_ , (fnStm ； ⊆-fnstm-lemma (λ ()) cliFnStm)) , (_ , serFnStm)
+  convertλs {mτ}{mσ} (((id , σ , server) , t) ∷ xs) with convertλ {[]}{mσ} id σ server t | convertλs {mτ}{mσ} xs
+  ... | fnStm | (Γ' , cliFnStm) , (Δ' , serFnStm) = (_ , cliFnStm) , (_ , (fnStm ； ⊆-fnstm-lemma (λ ()) serFnStm))
 
-  convertλs : ∀ {Γ Δ mτ mσ}
-            → List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >}))
-            → (FnStm [] ⇓ Γ ⦂ mτ < client >) × (FnStm [] ⇓ Δ ⦂ mσ < server >)
-  convertλs [] = {!`exp!} , {!`exp!}
-  convertλs (((id , σ , w') , t) ∷ xs) = {!!}
+  -- Takes a list of λ lifted list of functions and a term that runs on the client.
+  -- Returns JS code for client and server.
+  -- entryPoint : List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
+  --            → (Stm [] < client >) × (Stm [] < server >)
+  -- entryPoint (xs , (Δ , t)) with convertλs {nothing}{nothing} xs
+  -- ... | (Γ' , cliFnStmLifted) , (Δ' , serFnStmLifted) with convertCont {Δ}{Γ' +++ []}{Δ' +++ []}{nothing} client t
+  -- ... | (δ , cliFnStm) , (φ , serFnStm) =
+  --     `exp ((` `λ [] ⇒ (cliFnStmLifted ； cliFnStm ；return `undefined) · Data.List.All.[]))
+  --   , `exp ((` `λ [] ⇒ (serFnStmLifted ； serFnStm ；return `undefined) · Data.List.All.[]))
 
-  entryPoint : List (Σ (Id × Typeₒ × World) (λ { (id , σ , w') → [] ⊢ₒ ↓ σ < w' >})) × Σ Contextₒ (λ Δ → Δ ⊢ₒ ⋆< client >)
+  -- TODO add `prim `socket to client and `prim `io to server
+
+
+  entryPoint : ∀ {Γ w}
+             → Σ (List (Id × Typeₒ × World))
+                  (λ newbindings → Data.List.All.All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (Γ +++ toCtx newbindings) ⊢ₒ ⋆< w >)
              → (Stm [] < client >) × (Stm [] < server >)
-  entryPoint (xs , t) = {!!}
+  entryPoint (xs , all , t) = {!!}
+  -- entryPoint (xs , all , t) with convertλs {nothing}{nothing} ?
+  -- ... | (Γ' , cliFnStmLifted) , (Δ' , serFnStmLifted) with convertCont {?}{Γ' +++ []}{Δ' +++ []}{nothing} client t
+  -- ... | (δ , cliFnStm) , (φ , serFnStm) =
+  --     `exp ((` `λ [] ⇒ (cliFnStmLifted ； cliFnStm ；return `undefined) · Data.List.All.[]))
+  --   , `exp ((` `λ [] ⇒ (serFnStmLifted ； serFnStm ；return `undefined) · Data.List.All.[]))

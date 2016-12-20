@@ -28,11 +28,6 @@ module LambdaLifting where
   open import Closure.Types renaming (Type to Typeₒ ; Hyp to Hypₒ ; Conc to Concₒ ; Context to Contextₒ)
   open import Closure.Terms renaming (_⊢_ to _⊢ₒ_)
 
-  toHyp : Id × Typeₒ × World → Hypₒ
-  toHyp (id , τ , w) = id ⦂ τ < w >
-
-  toCtx = Data.List.map toHyp
-
   -- Accumulating ℕ to generate fresh variable names.
   mutual
     liftValue : ∀ {Γ τ w}

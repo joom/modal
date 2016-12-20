@@ -30,7 +30,9 @@ module JS.Terms where
   data Prim : Hyp → Set where
     `alert : Prim ("alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >)
     `version : Prim ("version" ⦂ `String < server >)
-    `log : Prim ("log" ∼ (λ ω → `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined))
+    -- `log : Prim ("log" ∼ (λ ω → `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined))
+    `logCli : Prim ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >)
+    `logSer : Prim ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < server >)
     `prompt : Prim ("prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client >)
     `readFile : Prim ("readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server >)
     -- PRIMITIVES FOR WEB SOCKETS (not accessible in ML5 or CPS, only for compilation)
@@ -68,8 +70,8 @@ module JS.Terms where
       -- Object terms
       `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (Data.List.map toTypePair terms) < w >
       `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
-      -- Valid terms
-      `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ Γ → Γ ⊢ C w < w >
+      -- -- Valid terms
+      -- `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ Γ → Γ ⊢ C w < w >
 
     -- Since we will not use any global variables, this should be enough.
     data Stm_<_> : Context → World → Set where
@@ -138,7 +140,7 @@ module JS.Terms where
         termEq : Γ' ⊢ `Object (Data.List.map toTypePair terms) < w > ≡ Γ' ⊢ `Object (Data.List.map toTypePair terms') < w >
         termEq = cong (λ x → Γ' ⊢ `Object x < w >) goalPf
     ⊆-exp-lemma s (`proj t key x) = `proj (⊆-exp-lemma s t) key x
-    ⊆-exp-lemma s (`vval u ∈) = `vval u (s ∈)
+    -- ⊆-exp-lemma s (`vval u ∈) = `vval u (s ∈)
 
     ⊆-stm-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Stm Γ < w > → Stm Γ' < w >
     ⊆-stm-lemma s (`exp x) = `exp (⊆-exp-lemma s x)
@@ -153,3 +155,6 @@ module JS.Terms where
     ⊆-fnstm-lemma s (_；_ {γ = γ} t u) = ⊆-fnstm-lemma s t ； ⊆-fnstm-lemma (sub-lemma-list {γ = γ} s) u
     ⊆-fnstm-lemma s (`if x `then t `else u) = `if ⊆-exp-lemma s x `then ⊆-fnstm-lemma s t `else ⊆-fnstm-lemma s u
     ⊆-fnstm-lemma s (`prim x) = `prim x
+
+    -- ⊆-fnstm-lemma2 : ∀ {Γ γ γ' mσ w} → γ ⊆ γ' → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ' ⦂ mσ < w >
+    -- ⊆-fnstm-lemma2 s t = {!!}
