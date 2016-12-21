@@ -160,8 +160,8 @@ module LambdaLifting where
       `open ⊆-term-lemma (_++-mono_ {_}{_}{Γ} id (map-mono _ ++ˡ)) t'
       `in ⊆-cont-lemma ((proj₂ (≡-⊆ (append-assoc Δ Γ _))) ∘ _++-mono_ {_}{_}{Δ +++ Γ} id (map-mono _ (++ʳ xs))) u'
 
-  entryPoint : ∀ {Γ w}
-             → Γ ⊢ₒ ⋆< w >
+  entryPoint : ∀ {w}
+             → [] ⊢ₒ ⋆< w >
              → Σ (List (Id × Typeₒ × World))
-                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (Γ +++ toCtx newbindings) ⊢ₒ ⋆< w >)
+                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (toCtx newbindings) ⊢ₒ ⋆< w >)
   entryPoint t = proj₂ (liftCont zero t)

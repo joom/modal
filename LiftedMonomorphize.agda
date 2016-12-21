@@ -46,9 +46,12 @@ module LiftedMonomorphize where
     convertType `Σt[t×[ t ×t]cont] = `Σt[t×[ convertType t ×t]cont]
     convertType (`Env Γ) = `Env (convertCtx Γ)
 
+    convertTuple : Id × Typeₒ × World → Id × Typeᵐ × World
+    convertTuple (id , τ , w) = (id , convertType τ , w)
+
     convertCtx : Contextₒ → Contextᵐ
     convertCtx [] = []
-    convertCtx ((x ⦂ τ < w >) ∷ xs) = (x ⦂ convertType τ < w >) ∷ convertCtx xs
+    convertCtx ((x ⦂ τ < w >) ∷ xs) = (LiftedMonomorphic.Types.toHyp (convertTuple (x , τ , w))) ∷ convertCtx xs
     convertCtx ((u ∼ C) ∷ xs) = (u ⦂ convertType (C client) < client >) ∷ (u ⦂ convertType (C server) < server >) ∷ convertCtx xs
 
   convertCtx∈v : ∀ {x τ w Γ} → (x ⦂ τ < w >) ∈ Γ → (x ⦂ convertType τ < w >) ∈ (convertCtx Γ)
@@ -149,15 +152,33 @@ module LiftedMonomorphize where
     convertCont (`let x =`unpack t `in u) = `let x =`unpack convertValue t `in (λ ω → convertCont (u ω))
     convertCont (`call t u) = `call (convertValue t) (convertValue u)
     convertCont `halt = `halt
-    convertCont (`prim x `in t) = `prim convertPrim x `in {!convertCont t!}
+    convertCont (`prim_`in_ {h = h} x t) =
+        `prim convertPrim x `in eq-replace (sym (cong (λ l → l ⊢ᵐ ⋆< _ >) (convertCtx++ {h ∷ []}))) (convertCont t)
     convertCont (`go-cc[ w' ] t) = `go-cc[ w' ] convertValue t
     convertCont (`let τ , x `=unpack t `in u) = `let convertType τ , x `=unpack convertValue t `in convertCont u
     convertCont (`open_`in_ {Δ = Δ}{w = w} t u) =
         `open convertValue t `in eq-replace (cong (λ l → l ⊢ᵐ ⋆< w > ) (sym (convertCtx++ {Δ}))) (convertCont u)
 
-  entryPoint : ∀ {Γ w}
+
+  convertTuples : List (Id × Typeₒ × World) → List (Id × Typeᵐ × World)
+  convertTuples [] = []
+  convertTuples (x ∷ xs) = convertTuple x ∷ convertTuples xs
+
+  entryPoint : ∀ {w}
              → Σ (List (Id × Typeₒ × World))
-                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (Γ +++ Closure.Types.toCtx newbindings) ⊢ₒ ⋆< w >)
+                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (Closure.Types.toCtx newbindings) ⊢ₒ ⋆< w >)
              → Σ (List (Id × Typeᵐ × World))
-                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (convertCtx Γ +++ LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< w >)
-  entryPoint (xs , all , t) = {!!}
+                 (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< w >)
+  entryPoint {w = w} (xs , all , t) =
+        convertTuples xs
+      , convertAll all
+      , eq-replace (cong (λ l → l ⊢ᵐ ⋆< w >) (ctxEq {xs})) (convertCont t)
+    where
+      ctxEq : ∀ {xs} → convertCtx (Closure.Types.toCtx xs) ≡ LiftedMonomorphic.Types.toCtx (convertTuples xs)
+      ctxEq {[]} = refl
+      ctxEq {(x , τ , w) ∷ xs} = cong (λ l → (x ⦂ convertType τ < w >) ∷ l) (ctxEq {xs})
+
+      convertAll : ∀ {xs} → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) xs
+                          → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) (convertTuples xs)
+      convertAll {[]} [] = []
+      convertAll {x ∷ xs} (px ∷ pxs) = convertValue px ∷ (convertAll pxs)
