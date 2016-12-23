@@ -44,7 +44,6 @@ module JS.Source where
     termSource (` t + u) = termSource t ++ " + " ++ termSource u
     termSource (` t * u) = termSource t ++ " * " ++ termSource u
     termSource (`v id ∈) = id
-    termSource (`vval {w}{C} u ∈) = u
     termSource {Γ} (`_·_ {argTypes}{_}{w} f args) =
         termSource f ++ "(" ++ concatStr (intersperse ", " (argsSource argTypes args)) ++ ")"
       where
@@ -63,7 +62,8 @@ module JS.Source where
     primSource : ∀ {h} → Prim h → String
     primSource `alert = "var _alert = function(obj) {alert(obj.fst); obj.snd({\"type\" : \"unit\"});};"
     primSource `version = "var _version = \"0.0.1\";"
-    primSource `log = "var _log = function(obj) {console.log(obj.fst); obj.snd({\"type\" : \"unit\"});};"
+    primSource `logCli = "var _log = function(obj) {console.log(obj.fst); obj.snd({\"type\" : \"unit\"});};"
+    primSource `logSer = "var _log = function(obj) {console.log(obj.fst); obj.snd({\"type\" : \"unit\"});};"
     primSource `prompt = "var _prompt = function(obj) {obj.snd(prompt(obj.fst));};"
     primSource `readFile = "var _readFile = function(obj) {require(\"fs\").readFile(obj.fst, \"utf-8\", function (err, data) {if(err) {throw err;} obj.snd(data);});}"
     primSource `socket = "var _socket = io();"

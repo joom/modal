@@ -27,12 +27,15 @@ module Example where
   open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
   open import Closure.Types renaming (Type to Typeₒ ; Hyp to Hypₒ ; Context to Contextₒ)
   open import Closure.Terms renaming (_⊢_ to _⊢ₒ_)
+  open import LiftedMonomorphic.Types renaming (Type to Typeᵐ ; Hyp to Hypᵐ ; Context to Contextᵐ)
+  open import LiftedMonomorphic.Terms renaming (_⊢_ to _⊢ᵐ_)
   open import JS.Types renaming (Type to Typeⱼ ; Hyp to Hypⱼ)
   open import JS.Terms renaming (_⊢_ to _⊢ⱼ_)
   open import JS.Source
   open import ML5toCPS
   open import CPStoClosure
   open import LambdaLifting
+  open import LiftedMonomorphize
 
   logVersion : [] ⊢₅ `Unit < client >
   logVersion =
@@ -48,8 +51,12 @@ module Example where
   logVersionClosure = CPStoClosure.convertCont logVersionCPS
 
   logVersionLifting : Σ (List (Id × Typeₒ × World))
-                        (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × ([] +++ toCtx newbindings) ⊢ₒ ⋆< client >)
+                        (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ₒ ↓ σ < w' > }) newbindings × (Closure.Types.toCtx newbindings) ⊢ₒ ⋆< client >)
   logVersionLifting = LambdaLifting.entryPoint logVersionClosure
+
+  logVersionMonomorphize : Σ (List (Id × Typeᵐ × World))
+                          (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< client >)
+  logVersionMonomorphize = LiftedMonomorphize.entryPoint logVersionLifting
 
   logJS-test : Stm [] < client >
   logJS-test =

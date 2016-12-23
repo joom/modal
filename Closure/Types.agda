@@ -328,5 +328,4 @@ module Closure.Types where
   toHyp (id , τ , w) = id ⦂ τ < w >
 
   toCtx : List (Id × Type × World) → Context
-  toCtx [] = []
-  toCtx (h ∷ hs) = toHyp h ∷ toCtx hs
+  toCtx = Data.List.map toHyp
