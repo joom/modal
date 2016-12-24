@@ -23,6 +23,7 @@ module JS.Types where
     `Undefined `Bool `Number `String : Type
     `Function : List Type → Type → Type
     `Object : List (Id × Type) → Type
+    `Σt[t×[_×t]cont] : Type → Type
 
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value

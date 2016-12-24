@@ -60,29 +60,22 @@ module LiftedMonomorphicToJS where
     convertType (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
     convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
-    convertType (`Σt[t×[_×t]cont] τ) =
-      `Object (("type" , `String)
-              ∷ ("fst" , {!!})
-              ∷ ("snd" , `Function (`Object (("type" , `String)
-                                            ∷ ("fst" , convertType τ )
-                                            ∷ ("snd" , {!!}) ∷ []) ∷ []) `Undefined) ∷ [])
+    convertType (`Σt[t×[_×t]cont] τ) = `Σt[t×[_×t]cont] (convertType τ)
     convertType (`Env Γ) = `Object (hypsToPair Γ)
 
   worldForType : Typeᵐ → World → World
   worldForType (` τ at w) _ = w
   worldForType _ w = w
 
-  convertHyp : World → Hypᵐ → Hypⱼ
-  convertHyp _ (x ⦂ τ < w >) = x ⦂ convertType τ < worldForType τ w >
+  convertHyp : Hypᵐ → Hypⱼ
+  convertHyp (x ⦂ τ < w >) = x ⦂ convertType τ < worldForType τ w >
 
-  convertCtx : World → Contextᵐ → Contextⱼ
-  convertCtx w [] = []
-  convertCtx w (h ∷ hs) with h
-  ... | _ ⦂ _ < _ > = convertHyp w h ∷ convertCtx w hs
+  convertCtx : Contextᵐ → Contextⱼ
+  convertCtx [] = []
+  convertCtx (h ∷ hs) = convertHyp h ∷ convertCtx hs
 
-
-  convertPrim : ∀ {h} → LiftedMonomorphic.Terms.Prim h → List (JS.Terms.Prim {!h!}) × List (JS.Terms.Prim {!!})
-  convertPrim `alert = {!!}
+  convertPrim : ∀ {hs} → LiftedMonomorphic.Terms.Prim hs → JS.Terms.Prim (convertCtx hs)
+  convertPrim `alert = {!`alert!}
   convertPrim `version = {!!}
   convertPrim `log = {!!}
   convertPrim `prompt = {!!}
@@ -127,7 +120,7 @@ module LiftedMonomorphicToJS where
     convertCont w (`let τ , x `=unpack v `in t) = {!!}
     convertCont w (`open t `in u) = {!!}
 
-    convertValue : ∀ {Γ τ w} → Γ ⊢ᵐ ↓ τ < w > → (convertCtx w Γ) ⊢ⱼ (convertType τ) < w >
+    convertValue : ∀ {Γ τ w} → Γ ⊢ᵐ ↓ τ < w > → convertCtx Γ ⊢ⱼ (convertType τ) < w >
     convertValue `tt = `obj (("type" , `String , `string "unit") ∷ [])
     convertValue (`string s) = `string s
     convertValue `true = `true
@@ -149,7 +142,7 @@ module LiftedMonomorphicToJS where
     convertValue (`inr t `as τ) = `obj (("type" , `String , `string "or") ∷
                                         ("dir" , `String , `string "inr") ∷
                                         ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , convertValue t) ∷ [])
-    convertValue (`hold t) = {!convertValue t!}
+    convertValue (`hold {w = w} t) = {!convertValue t!}
     convertValue (`sham x) = {!!}
     convertValue (`Λ x) = {!!}
     convertValue (`pack ω t) = {!!}

@@ -159,7 +159,6 @@ module LiftedMonomorphize where
     convertCont (`open_`in_ {Δ = Δ}{w = w} t u) =
         `open convertValue t `in eq-replace (cong (λ l → l ⊢ᵐ ⋆< w > ) (sym (convertCtx++ {Δ}))) (convertCont u)
 
-
   convertTuples : List (Id × Typeₒ × World) → List (Id × Typeᵐ × World)
   convertTuples [] = []
   convertTuples (x ∷ xs) = convertTuple x ∷ convertTuples xs

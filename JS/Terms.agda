@@ -27,19 +27,18 @@ module JS.Terms where
 
   open import Definitions
 
-  data Prim : Hyp → Set where
-    `alert : Prim ("alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >)
-    `version : Prim ("version" ⦂ `String < server >)
-    -- `log : Prim ("log" ∼ (λ ω → `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined))
-    `logCli : Prim ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >)
-    `logSer : Prim ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < server >)
-    `prompt : Prim ("prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client >)
-    `readFile : Prim ("readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server >)
+  data Prim : List Hyp → Set where
+    `alert : Prim [ "alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client > ]
+    `version : Prim [ "version" ⦂ `String < server > ]
+    `log : Prim (("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >) ∷ ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < server >) ∷ [])
+    `prompt : Prim [ "prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client > ]
+    `readFile : Prim [ "readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server > ]
     -- PRIMITIVES FOR WEB SOCKETS (not accessible in ML5 or CPS, only for compilation)
-    `socket : Prim ("socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
-                                       ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client >)
-    `io : Prim ("io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
-                               ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server >)
+    `socket : Prim [ "socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
+                                       ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client > ]
+    `io : Prim [ "io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
+                               ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server > ]
+
 
   infixl 5 _⊢_
   infixl 4 _；_
@@ -70,8 +69,11 @@ module JS.Terms where
       -- Object terms
       `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (Data.List.map toTypePair terms) < w >
       `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
-      -- -- Valid terms
-      -- `vval : ∀ {w C} → (u : Id) → (u ∼ C) ∈ Γ → Γ ⊢ C w < w >
+      -- Existential pair
+      -- `packΣ : ∀ {σ w} → (τ : Type) → Γ ⊢ (` τ × ` (` σ × τ) cont) < w > → Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >
+      `packΣ : ∀ {σ w} → (τ : Type)
+             → Γ ⊢ `Object (("fst" , τ) ∷ ("snd" , `Function (`Object (("fst" , σ) ∷ ("snd" , τ) ∷ []) ∷ []) `Undefined) ∷ []) < w >
+             → Γ ⊢ `Σt[t×[ σ ×t]cont] < w >
 
     -- Since we will not use any global variables, this should be enough.
     data Stm_<_> : Context → World → Set where
@@ -86,7 +88,7 @@ module JS.Terms where
       _；return_ : ∀ {Γ γ τ w} → FnStm Γ ⇓ γ ⦂ nothing < w > → (γ +++ Γ) ⊢ τ < w > → FnStm Γ ⇓ γ ⦂ (just τ) < w >
       _；_ : ∀ {Γ γ γ' w mσ} → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm (γ +++ Γ) ⇓ γ' ⦂ mσ < w > → FnStm Γ ⇓ (γ' +++ γ) ⦂ mσ < w >
       `if_`then_`else_ : ∀ {Γ γ w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w >
-      `prim : ∀ {Γ h mσ w} → (x : Prim h) → FnStm Γ ⇓ (h ∷ []) ⦂ mσ < w >
+      `prim : ∀ {Γ hs mσ w} → (x : Prim hs) → FnStm Γ ⇓ (hs +++ []) ⦂ mσ < w >
 
     toTypePair : ∀ {Γ w} → Id × Σ Type (λ τ → Γ ⊢ τ < w >) → Id × Type
     toTypePair (id , τ , ω) = (id , τ)
@@ -106,6 +108,10 @@ module JS.Terms where
       pf = trans (sym (map-compose fields)) (map-id fields)
       tEq : Γ ⊢ (`Object ((Data.List.map toTypePair ∘ Data.List.map f) fields) < w >) ≡ Γ ⊢ (`Object fields < w >)
       tEq = cong (λ x → Γ ⊢ `Object x < w >) pf
+  default (`Σt[t×[_×t]cont] τ) =
+      `packΣ `Undefined (`obj (("fst" , `Undefined , `undefined) ∷
+                                ("snd" , `Function (`Object (("fst" , τ) ∷ ("snd" , `Undefined) ∷ []) ∷ [])
+                                                   `Undefined , (`λ ["o"] ⇒ (`nop ；return `undefined))) ∷ []))
 
   {-# NON_TERMINATING #-}
   mutual
@@ -140,7 +146,7 @@ module JS.Terms where
         termEq : Γ' ⊢ `Object (Data.List.map toTypePair terms) < w > ≡ Γ' ⊢ `Object (Data.List.map toTypePair terms') < w >
         termEq = cong (λ x → Γ' ⊢ `Object x < w >) goalPf
     ⊆-exp-lemma s (`proj t key x) = `proj (⊆-exp-lemma s t) key x
-    -- ⊆-exp-lemma s (`vval u ∈) = `vval u (s ∈)
+    ⊆-exp-lemma s (`packΣ τ u) = `packΣ τ (⊆-exp-lemma s u)
 
     ⊆-stm-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Stm Γ < w > → Stm Γ' < w >
     ⊆-stm-lemma s (`exp x) = `exp (⊆-exp-lemma s x)
