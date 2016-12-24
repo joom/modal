@@ -28,12 +28,14 @@ module JS.Terms where
   open import Definitions
 
   data Prim : List Hyp → Set where
-    `alert : Prim [ "alert" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client > ]
+    `alert : Prim [ "alert" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client > ]
     `version : Prim [ "version" ⦂ `String < server > ]
-    `log : Prim (("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < client >) ∷ ("log" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `Object (("type" , `String) ∷ []) ] `Undefined) ∷ []) ] `Undefined < server >) ∷ [])
-    `prompt : Prim [ "prompt" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < client > ]
-    `readFile : Prim [ "readFile" ⦂ `Function [ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Function [ `String ] `Undefined) ∷ []) ] `Undefined < server > ]
-    -- PRIMITIVES FOR WEB SOCKETS (not accessible in ML5 or CPS, only for compilation)
+    `log : Prim (("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client >)
+               ∷ ("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < server >) ∷ [])
+    `prompt : Prim [ ("prompt" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < client >) ]
+    `readFile : Prim [ ("readFile" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < server >) ]
+    -- PRIMITIVES FOR WEB SOCKETS
+    -- (not accessible in other intermediate languages, only for compilation to JS)
     `socket : Prim [ "socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
                                        ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client > ]
     `io : Prim [ "io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
