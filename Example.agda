@@ -58,23 +58,6 @@ module Example where
                           (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< client >)
   logVersionMonomorphize = LiftedMonomorphize.entryPoint logVersionLifting
 
-  logJS-test : Stm [] < client >
-  logJS-test =
-    `exp (` (`λ [] ⇒ (
-      `prim `alert ；
-      `prim `socket ；
-      `exp (` `proj (`v "socket" (here refl)) "on" (here refl)
-            · (`string "version" ∷ (`λ "v" ∷ [] ⇒ (`exp (` `v "alert" (there (there (here refl)))
-                                                          · (`obj (("type" , _ , `string "and") ∷
-                                                                   ("fst" , _ , `v "v" (here refl)) ∷
-                                                                   ("snd" , _ , (`λ "a" ∷ [] ⇒ (`exp `undefined ；return `undefined)))
-                                                                   ∷ []) ∷ [])) ；return `undefined) ∷ [])))
-    ；return `undefined
-    )) · [])
-
-  logJS-test-source : String
-  logJS-test-source = stmSource logJS-test
-
   ----------------------------------------------------------
 
   file : [] ⊢₅ `Unit < client >

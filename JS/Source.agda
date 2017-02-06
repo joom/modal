@@ -55,6 +55,9 @@ module JS.Source where
     termSource (`obj terms) =
       "{" ++ concatStr (intersperse ", " (Data.List.map (λ {(id , _ , t) → "\"" ++ id ++ "\" : " ++ termSource t }) terms)) ++ "}"
     termSource (`proj t key x) = "(" ++ termSource t ++ ")[\"" ++ key ++ "\"]"
+    termSource (`packΣ τ t) = termSource t
+    termSource (`proj₁Σ t) = "(" ++ termSource t ++ ")[\"fst\"]"
+    termSource (`proj₂Σ t) = "(" ++ termSource t ++ ")[\"snd\"]"
 
     stmSource : ∀ {Γ w} → Stm Γ < w > → String
     stmSource (`exp x) = termSource x ++ ";"

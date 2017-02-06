@@ -27,10 +27,8 @@ module JS.Types where
 
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
-    -- _∼_ : (u : Id) → (World → Type) → Hyp -- Valid
 
   data Conc : Set where
     _<_> : (τ : Type) (w : World) → Conc -- Expression
-    -- ↓_<_> : (τ : Type) (w : World) → Conc -- Value
 
   Context = List Hyp

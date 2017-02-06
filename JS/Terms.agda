@@ -69,13 +69,15 @@ module JS.Terms where
              → FnStm ((zipWith (_⦂_< w >) ids argTypes) +++ Γ) ⇓ Γ' ⦂ (just τ) < w >
              → Γ ⊢ `Function argTypes τ < w >
       -- Object terms
-      `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (Data.List.map toTypePair terms) < w >
+      `obj : ∀ {w} → (terms : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >))) → Γ ⊢ `Object (toTypePairs terms) < w >
       `proj : ∀ {keys τ w} → (o : Γ ⊢ `Object keys < w >) → (key : Id) → (key , τ) ∈ keys → Γ ⊢ τ < w >
       -- Existential pair
-      -- `packΣ : ∀ {σ w} → (τ : Type) → Γ ⊢ (` τ × ` (` σ × τ) cont) < w > → Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >
       `packΣ : ∀ {σ w} → (τ : Type)
-             → Γ ⊢ `Object (("fst" , τ) ∷ ("snd" , `Function (`Object (("fst" , σ) ∷ ("snd" , τ) ∷ []) ∷ []) `Undefined) ∷ []) < w >
+             → Γ ⊢ `Object (("type" , `String) ∷ ("fst" , τ) ∷
+                             ("snd" , `Function (`Object (("type" , `String) ∷ ("fst" , σ) ∷ ("snd" , τ) ∷ []) ∷ []) `Undefined) ∷ []) < w >
              → Γ ⊢ `Σt[t×[ σ ×t]cont] < w >
+      `proj₁Σ : ∀ {τ σ w} → Γ ⊢ `Σt[t×[ σ ×t]cont] < w > → Γ ⊢ τ < w >
+      `proj₂Σ : ∀ {τ σ w} → Γ ⊢ `Σt[t×[ σ ×t]cont] < w > → Γ ⊢ `Function (`Object (("type" , `String) ∷ ("fst" , σ) ∷ ("snd" , τ) ∷ []) ∷ []) `Undefined < w >
 
     -- Since we will not use any global variables, this should be enough.
     data Stm_<_> : Context → World → Set where
@@ -92,8 +94,9 @@ module JS.Terms where
       `if_`then_`else_ : ∀ {Γ γ w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w >
       `prim : ∀ {Γ hs mσ w} → (x : Prim hs) → FnStm Γ ⇓ (hs +++ []) ⦂ mσ < w >
 
-    toTypePair : ∀ {Γ w} → Id × Σ Type (λ τ → Γ ⊢ τ < w >) → Id × Type
-    toTypePair (id , τ , ω) = (id , τ)
+    toTypePairs : ∀ {Γ w} → List (Id × Σ Type (λ τ → Γ ⊢ τ < w >)) → List (Id × Type)
+    toTypePairs [] = []
+    toTypePairs ((id , τ , ω) ∷ xs) = (id , τ) ∷ toTypePairs xs
 
   {-# NON_TERMINATING #-}
   default : ∀ {Γ w} (τ : Type) → Γ ⊢ τ < w >
@@ -102,18 +105,18 @@ module JS.Terms where
   default `Number = `n (inj₁ (+ 0))
   default `String = `string ""
   default (`Function τs σ) = `λ Data.List.map (underscorePrefix ∘ Data.Nat.Show.show) (downFrom (length τs))  ⇒ ((`exp `undefined ；return default σ))
-  default {Γ}{w} (`Object fields) = eq-replace tEq (`obj (Data.List.map f fields))
+  default {Γ}{w} (`Object fields) = eq-replace (cong (λ l → Γ ⊢ (`Object l) < w >) (pf fields)) (`obj (f fields))
     where
-      f : Id × Type → Id × Σ Type (λ τ → Γ ⊢ τ < w >)
-      f (id , τ) = (id , τ , default {Γ}{w} τ)
-      pf : (Data.List.map toTypePair ∘ Data.List.map f) fields ≡ fields
-      pf = trans (sym (map-compose fields)) (map-id fields)
-      tEq : Γ ⊢ (`Object ((Data.List.map toTypePair ∘ Data.List.map f) fields) < w >) ≡ Γ ⊢ (`Object fields < w >)
-      tEq = cong (λ x → Γ ⊢ `Object x < w >) pf
+      f : List (Id × Type) → List (Id × Σ Type (λ τ → Γ ⊢ (τ < w >)))
+      f [] = []
+      f ((id , τ) ∷ xs) = (id , τ , default {Γ}{w} τ) ∷ f xs
+      pf : (xs : _) → toTypePairs (f xs) ≡ xs
+      pf [] = refl
+      pf (x ∷ xs) = cong (λ l → x ∷ l) (pf xs)
   default (`Σt[t×[_×t]cont] τ) =
-      `packΣ `Undefined (`obj (("fst" , `Undefined , `undefined) ∷
-                                ("snd" , `Function (`Object (("fst" , τ) ∷ ("snd" , `Undefined) ∷ []) ∷ [])
-                                                   `Undefined , (`λ ["o"] ⇒ (`nop ；return `undefined))) ∷ []))
+      `packΣ _ (`obj (("type" , _ , `string "pair") ∷
+                      ("fst" , _ , `undefined) ∷
+                      ("snd" , _ , (`λ ["o"] ⇒ (`nop ；return `undefined))) ∷ []))
 
   {-# NON_TERMINATING #-}
   mutual
@@ -134,21 +137,18 @@ module JS.Terms where
     ⊆-exp-lemma s ((`_·_) {argTypes} t terms) = ` ⊆-exp-lemma s t · Data.List.All.map (⊆-exp-lemma s) terms
     ⊆-exp-lemma s (`λ ids ⇒ body) =
       `λ ids ⇒ ⊆-fnstm-lemma (sub-lemma-list {γ = zipWith (λ x τ → x ⦂ τ < _ >) ids _} s) body
-    ⊆-exp-lemma {Γ}{Γ'}{_}{w} s (`obj terms) = eq-replace (sym termEq) (`obj terms')
+    ⊆-exp-lemma {Γ}{Γ'}{_}{w} s (`obj terms) = eq-replace (cong (λ l → Γ' ⊢ (`Object l) < w > ) (pf terms)) (`obj (weaken terms))
       where
-        singleWeaken : Id × Σ Type (λ τ → Γ ⊢ τ < w >) → Id × Σ Type (λ τ → Γ' ⊢ τ < w >)
-        singleWeaken (id , τ , t) = (id , τ , ⊆-exp-lemma s t)
-
-        terms' : List (Id × Σ Type (λ τ → Γ' ⊢ τ < w >))
-        terms' = Data.List.map singleWeaken terms
-
-        goalPf : Data.List.map toTypePair terms ≡ Data.List.map toTypePair terms'
-        goalPf = map-compose {g = toTypePair} {f = singleWeaken} terms
-
-        termEq : Γ' ⊢ `Object (Data.List.map toTypePair terms) < w > ≡ Γ' ⊢ `Object (Data.List.map toTypePair terms') < w >
-        termEq = cong (λ x → Γ' ⊢ `Object x < w >) goalPf
+        weaken : List (Id × Σ Type (λ τ → Γ ⊢ τ < w >)) → List (Id × Σ Type (λ τ → Γ' ⊢ τ < w >))
+        weaken [] = []
+        weaken ((id , τ , t) ∷ xs) = (id , τ , ⊆-exp-lemma s t) ∷ weaken xs
+        pf : (xs : List _) → toTypePairs (weaken xs) ≡ toTypePairs xs
+        pf [] = refl
+        pf ((id , τ , t) ∷ xs) = cong (λ l → (id , τ) ∷ l) (pf xs)
     ⊆-exp-lemma s (`proj t key x) = `proj (⊆-exp-lemma s t) key x
     ⊆-exp-lemma s (`packΣ τ u) = `packΣ τ (⊆-exp-lemma s u)
+    ⊆-exp-lemma s (`proj₁Σ t) = `proj₁Σ (⊆-exp-lemma s t)
+    ⊆-exp-lemma s (`proj₂Σ t) = `proj₂Σ (⊆-exp-lemma s t)
 
     ⊆-stm-lemma : ∀ {Γ Γ' w} → Γ ⊆ Γ' → Stm Γ < w > → Stm Γ' < w >
     ⊆-stm-lemma s (`exp x) = `exp (⊆-exp-lemma s x)
