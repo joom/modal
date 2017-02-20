@@ -41,31 +41,32 @@ module LiftedMonomorphicToJS where
   mutual
     -- Taking advantage of that we only have two worlds here.
     hypToPair : Hypᵐ → Id × Typeⱼ
-    hypToPair (x ⦂ τ < w >) = x , convertType τ
+    hypToPair (x ⦂ τ < w >) = x , convertType {w} τ
 
     -- because Agda thinks mapping a list doesn't terminate.
-    hypsToPair : List Hypᵐ → List (Id × Typeⱼ)
+    hypsToPair : {w : World} → List Hypᵐ → List (Id × Typeⱼ)
     hypsToPair [] = []
-    hypsToPair (x ∷ xs) with hypsToPair xs
-    ... | xs' = hypToPair x ∷ xs'
+    hypsToPair {w} ((x ⦂ τ < w' >) ∷ xs) with w decW w'
+    hypsToPair ((x ⦂ τ < w >) ∷ xs) | yes refl = hypToPair (x ⦂ τ < w >) ∷ hypsToPair {w} xs
+    ... | no q = hypsToPair {w} xs
 
-    convertType : Typeᵐ → Typeⱼ
+    convertType : {w : World} → Typeᵐ → Typeⱼ
     convertType `Int = `Number
     convertType `Bool = `Bool
     convertType `Unit = `Object (("type" , `String) ∷ [])
     convertType `String = `String
-    convertType ` τ cont = `Function [ convertType τ ] `Undefined
-    convertType (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType τ ) ∷ ("snd" , convertType σ) ∷ [])
-    convertType (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType τ) ∷ ("inr" , convertType σ) ∷ [])
-    convertType (` τ at w) = {!!} -- todo
-    convertType (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
-    convertType (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
-    convertType (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType (C client))
-    convertType (`Σt[t×[_×t]cont] τ) = `Σt[t×[_×t]cont] (convertType τ)
-    convertType (`Env Γ) = `Object (hypsToPair Γ)
+    convertType {w} ` τ cont = `Function [ convertType {w} τ ] `Undefined
+    convertType {w} (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType {w} τ ) ∷ ("snd" , convertType {w} σ) ∷ [])
+    convertType {w} (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType {w} τ) ∷ ("inr" , convertType {w} σ) ∷ [])
+    convertType {w} (` τ at w') = {!!} -- todo
+    convertType {w} (`⌘ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
+    convertType {w} (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
+    convertType {w} (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
+    convertType {w} (`Σt[t×[_×t]cont] τ) = `Σt[t×[_×t]cont] (convertType {w} τ)
+    convertType {w} (`Env Γ) = `Object (hypsToPair {w} Γ)
 
   convertHyp : Hypᵐ → Hypⱼ
-  convertHyp (x ⦂ τ < w >) = x ⦂ convertType τ < w >
+  convertHyp (x ⦂ τ < w >) = x ⦂ convertType {w} τ < w >
 
   convertCtx : Contextᵐ → Contextⱼ
   convertCtx [] = []
@@ -135,7 +136,7 @@ module LiftedMonomorphicToJS where
     ... | (Δ'' , uCli) , (Φ'' , uSer) = ({!!} , {!!}) , ({!!} , {!!})
 
     convertValue : ∀ {Γ Δ Φ τ w mτ} → Γ ⊢ᵐ ↓ τ < w >
-                 → convertCtx Γ ⊢ⱼ (convertType τ) < w >
+                 → convertCtx Γ ⊢ⱼ (convertType {w} τ) < w >
                    × Σ _ (λ δ → FnStm Δ ⇓ δ ⦂ mτ < client >)
                    × Σ _ (λ φ → FnStm Φ ⇓ φ ⦂ mτ < server >)
     convertValue `tt = `obj (("type" , `String , `string "unit") ∷ []) , ([] , `nop) , ([] , `nop)
@@ -198,17 +199,21 @@ module LiftedMonomorphicToJS where
     ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ {!t'!}) , tCliPair , tSerPair
     convertValue (`packΣ τ t) with convertValue t
     ... | (t' , tCliPair , tSerPair) = `packΣ (convertType τ) t' , tCliPair , tSerPair
-    convertValue {Γ}{w = w} (`buildEnv {Δ} pf) = {! `obj (envList {!Δ!} {!!}) !} , ([] , `nop) , ([] , `nop)
+    convertValue {Γ}{w = w} (`buildEnv {Δ} pf) =
+          eq-replace (cong (λ v → _ ⊢ⱼ (`Object v < w >)) (pf' Δ pf w)) (`obj (envList Δ pf w))  , ([] , `nop) , ([] , `nop)
       where
-        envList : (Δ : Contextᵐ) → Δ ⊆ Γ → List (Id × Σ Typeⱼ (λ τ → convertCtx Γ ⊢ⱼ (τ < w >)))
-        envList [] s = []
-        envList ((x ⦂ τ < w' >) ∷ hs) s with w decW w'
-        ... | yes p = (x , convertType τ , `v x (eq-replace (cong _ (sym p)) (convert∈ (s (here refl))))) ∷ envList hs (s ∘ there)
-        ... | no q = (x , convertType τ , {!!}) ∷ envList hs (s ∘ there)
+        envList : (Δ : Contextᵐ) → Δ ⊆ Γ → (w : World) → List (Id × Σ Typeⱼ (λ τ → convertCtx Γ ⊢ⱼ (τ < w >)))
+        envList [] s w = []
+        envList ((x ⦂ τ < w' >) ∷ hs) s w with w decW w'
+        ... | no q = envList hs (s ∘ there) w
+        envList ((x ⦂ τ < w' >) ∷ hs) s .w' | yes refl =
+            ((x , convertType {w'} τ , `v x (convert∈ (s (here refl))))) ∷ envList hs (s ∘ there) w'
 
-        -- pf' : (xs : _) (s : xs ⊆ Γ) → hypsToPair xs ≡ toTypePairs (envList xs s)
-        -- pf' [] s = refl
-        -- pf' ((x ⦂ τ < w' >) ∷ xs) s = {!!}
+        pf' : (xs : _) (s : xs ⊆ Γ) (w : World) → toTypePairs (envList xs s w) ≡ hypsToPair {w} xs
+        pf' [] s w = refl
+        pf' ((x ⦂ τ < w' >) ∷ xs) s w with w decW w'
+        ... | no q = pf' xs (s ∘ there) w
+        pf' ((x ⦂ τ < w' >) ∷ xs) s .w' | yes refl = cong (λ l → (x , convertType τ) ∷ l) (pf' xs (s ∘ there) w')
 
   convertλ : ∀ {Γ mτ} → (id : Id) (τ : Typeᵐ) (w : World) → [] ⊢ᵐ ↓ τ < w >
            → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ []) ⦂ mτ < w >
