@@ -191,12 +191,12 @@ module LiftedMonomorphicToJS where
           , tCliPair , tSerPair
     convertValue (`hold {w = w} t) with convertValue t
     ... | (t' , tCliPair , tSerPair) = {!t'!} , tCliPair , tSerPair
-    convertValue {w = w} (`sham C) with convertValue (C w)
-    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ {!!}) , tCliPair , tSerPair
-    convertValue {w = w} (`Λ C) with convertValue (C w)
-    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ {!!}) , tCliPair , tSerPair
-    convertValue (`pack ω t) with convertValue t
-    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ {!t'!}) , tCliPair , tSerPair
+    convertValue {w = w} (`sham C) with convertValue (C w) -- TODO revise
+    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
+    convertValue {w = w} (`Λ C) with convertValue (C w) -- TODO revise
+    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
+    convertValue (`pack ω t) with convertValue t -- TODO revise
+    ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
     convertValue (`packΣ τ t) with convertValue t
     ... | (t' , tCliPair , tSerPair) = `packΣ (convertType τ) t' , tCliPair , tSerPair
     convertValue {Γ}{w = w} (`buildEnv {Δ} pf) =
