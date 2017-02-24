@@ -166,3 +166,10 @@ module JS.Terms where
 
     -- ⊆-fnstm-lemma2 : ∀ {Γ γ γ' mσ w} → γ ⊆ γ' → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ' ⦂ mσ < w >
     -- ⊆-fnstm-lemma2 s t = {!!}
+
+    -- TODO
+    postulate
+      reconcileTerms : ∀ {Γ Γ' Γ'' mσ w}
+              → FnStm Γ ⇓ Γ' ⦂ mσ < w >
+              → FnStm Γ ⇓ Γ'' ⦂ mσ < w >
+              → FnStm Γ ⇓ (reconcileCtxs Γ' Γ'') ⦂ mσ < w > × FnStm Γ ⇓ (reconcileCtxs Γ' Γ'') ⦂ mσ < w >
