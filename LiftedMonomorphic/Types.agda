@@ -321,3 +321,6 @@ module LiftedMonomorphic.Types where
   toCtx : List (Id × Type × World) → Context
   toCtx [] = []
   toCtx (h ∷ hs) = toHyp h ∷ toCtx hs
+
+  hypWorld : Hyp → World
+  hypWorld (_ ⦂ _ < w >) = w

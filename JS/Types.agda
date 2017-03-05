@@ -140,3 +140,21 @@ module JS.Types where
   reconcileCtxs (x ∷ xs) (y ∷ ys) with x decHyp y
   ... | no q = x ∷ y ∷ reconcileCtxs xs ys
   reconcileCtxs (x ∷ xs) (.x ∷ ys) | yes refl = x ∷ reconcileCtxs xs ys
+
+  onlyCliCtx : Context → Context
+  onlyCliCtx [] = []
+  onlyCliCtx ((x ⦂ τ < client >) ∷ xs) = (x ⦂ τ < client >) ∷ onlyCliCtx xs
+  onlyCliCtx ((x ⦂ τ < server >) ∷ xs) = onlyCliCtx xs
+
+  onlySerCtx : Context → Context
+  onlySerCtx [] = []
+  onlySerCtx ((x ⦂ τ < server >) ∷ xs) = (x ⦂ τ < server >) ∷ onlySerCtx xs
+  onlySerCtx ((x ⦂ τ < client >) ∷ xs) = onlySerCtx xs
+
+  only : World → Context → Context
+  only client xs = onlyCliCtx xs
+  only server xs = onlySerCtx xs
+
+  onlyEmpty : ∀ {w} → only w [] ≡ []
+  onlyEmpty {client} = refl
+  onlyEmpty {server} = refl

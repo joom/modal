@@ -72,9 +72,13 @@ module LiftedMonomorphicToJS where
   convertCtx [] = []
   convertCtx (h ∷ hs) = convertHyp h ∷ convertCtx hs
 
-  convert∈ : ∀ {h Γ} → h ∈ Γ → (convertHyp h) ∈ (convertCtx Γ)
-  convert∈ (here refl) = here refl
-  convert∈ (there i) = there (convert∈ i)
+  convert∈ : ∀ {h Γ} → h ∈ Γ → (convertHyp h) ∈ only (hypWorld h) (convertCtx Γ)
+  convert∈ {x ⦂ τ < client >} (here refl) = here refl
+  convert∈ {x ⦂ τ < server >} (here refl) = here refl
+  convert∈ {x ⦂ τ < client >} {(y ⦂ σ < client >) ∷ xs} (there i) = there (convert∈ i)
+  convert∈ {x ⦂ τ < client >} {(y ⦂ σ < server >) ∷ xs} (there i) = convert∈ i
+  convert∈ {x ⦂ τ < server >} {(y ⦂ σ < client >) ∷ xs} (there i) = convert∈ i
+  convert∈ {x ⦂ τ < server >} {(y ⦂ σ < server >) ∷ xs} (there i) = there (convert∈ i)
 
   convertPrim : ∀ {hs} → LiftedMonomorphic.Terms.Prim hs → JS.Terms.Prim (convertCtx hs)
   convertPrim `alert = `alert
@@ -85,25 +89,22 @@ module LiftedMonomorphicToJS where
 
   mutual
     convertCont : ∀ {Γ Δ Φ}
+                → {s : only client (convertCtx Γ) ⊆ Δ}
+                → {s' : only server (convertCtx Γ) ⊆ Φ}
                 → (w : World)
                 → Γ ⊢ᵐ ⋆< w >
                 → Σ _ (λ δ → FnStm Δ ⇓ δ ⦂ nothing < client >) × Σ _ (λ φ → FnStm Φ ⇓ φ ⦂ nothing < server >)
-                -- convertCont {Γ}{Δ}{Φ} client (`if t `then u `else v) with convertValue t
-                -- ... | t' , (Δ' , tCli) , (Φ' , tSer)
-                -- with convertCont {Γ}{Δ}{Φ} client u | convertCont {Γ}{Δ}{Φ} client v
-                -- ... | (δ , a) , (φ , b) | (δ' , c) , (φ' , d) =
-                -- (δ +++ Δ' , (tCli ； `if {!t'!} `then ⊆-fnstm-lemma (++ʳ Δ') a `else {!c!}))
-                -- , (_ , (tSer ； ⊆-fnstm-lemma (++ʳ Φ') (b ； ⊆-fnstm-lemma (++ʳ φ) d)))
-    convertCont {Γ}{Δ}{Φ} client (`if t `then u `else v) with convertValue t
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`if t `then u `else v) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer)
-      with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ} client u
+      with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} client u
     ... | (Δ'' , uCli) , (Φ'' , uSer)
-      with convertCont {Γ}{Δ'' +++ Δ' +++ Δ}{Φ'' +++ Φ' +++ Φ} client v
-    ... | (Δ''' , vCli) , (Φ''' , vSer) =
-          (_ , (tCli ； (`if {!t'!} `then {!uCli!} `else {!vCli!})))
-        , (_ , (tSer ； (uSer ； vSer)))
-        --   (δ +++ Δ' , (tCli ； `if {!t'!} `then ⊆-fnstm-lemma (++ʳ Δ') a `else {!c!}))
-        -- , (_ , (tSer ； ⊆-fnstm-lemma (++ʳ Φ') (b ； ⊆-fnstm-lemma (++ʳ φ) d)))
+      with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} client v
+    ... | (Δ''' , vCli) , (Φ''' , vSer)
+      with reconcileTerms uCli vCli | reconcileTerms uSer vSer
+    ... | uCli' , vCli' | uSer' , vSer' =
+          -- (_ , (tCli ； (`if ⊆-exp-lemma (++ʳ Δ' ∘ s) t' `then uCli' `else vCli')))
+          (_ , (tCli ； (`if {!!} `then uCli' `else vCli')))
+        , (_ , (tSer ； (uSer ； ⊆-fnstm-lemma (++ʳ Φ'') vSer)))
     convertCont server (`if t `then u `else v) = {!!}
     convertCont w (`letcase x , y `= t `in u `or v) = {!!}
     convertCont w (`leta x `= t `in u) = {!!}
@@ -111,11 +112,13 @@ module LiftedMonomorphicToJS where
     convertCont w (`put u `= t `in v) = {!!}
     -- convertCont {Γ}{Δ}{Φ} w (`let x `=fst t `in u) with convertValue {Γ}{Δ +++ convertCtx Γ}{Φ +++ convertCtx Γ} t
     -- ... | t' , (Δ' , tCli) , (Φ' , tSer) with convertCont {_}{Δ' +++ (Δ +++ convertCtx Γ)}{Φ' +++ (Φ +++ convertCtx Γ)} w u
-    convertCont {Γ}{Δ}{Φ} w (`let x `=fst t `in u) with convertValue {Γ}{Δ}{Φ} t
-    ... | t' , (Δ' , tCli) , (Φ' , tSer) with convertCont {_}{Δ' +++ Δ}{Φ' +++ Φ} w u
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`let x `=fst t `in u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | t' , (Δ' , tCli) , (Φ' , tSer)
+      with convertCont {_}{_ ∷ (Δ' +++ Δ)}{_ ∷ (Φ' +++ Φ)}{s = {!!}}{s' = {!!}} w u
     ... | (Δ'' , uCli) , (Φ'' , uSer) with w
-    ... | client = (_ , (tCli ； uCli ； `var x {!t'!})) , (_ , (tSer ； uSer))
-    ... | server = (_ , (tCli ； uCli)) , (_ , (tSer ； uSer ； `var x {!t'!}))
+    ... | client = ({!!} , {!!}) , ((_ +++ (x ⦂ _ < server >) ∷ []) +++ Φ' , (tSer ； (`var x {!t'!} ； {!uSer!})))
+    -- (_ , (tCli ； uCli ； `var x {!t'!})) , (_ , (tSer ； uSer))
+    ... | server = {!!} -- (_ , (tCli ； uCli)) , (_ , (tSer ； uSer ； `var x {!t'!}))
     convertCont w (`let x `=snd t `in u) = {!!}
     convertCont {Γ}{Δ}{Φ} w (`let x `= t ⟨ w' ⟩`in u) with convertValue {Γ}{Δ}{Φ} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer) with convertCont {_}{Δ' +++ Δ}{Φ' +++ Φ} w u
@@ -123,9 +126,10 @@ module LiftedMonomorphicToJS where
     ... | client = (_ , (tCli ； (uCli ； {!t'!}))) , (_ , (tSer ； uSer))
     ... | server = (_ , (tCli ； uCli)) , (_ , {!!})
     convertCont w (`let_=`unpack_`in_ x t u) = {!!}
-    convertCont client (`go-cc[ client ] t) = {!convertValue t!}
-    convertCont server (`go-cc[ server ] t) = {!convertValue t!}
-    convertCont client (`go-cc[ server ] t) with convertValue t
+    convertCont {Γ}{Δ}{Φ} client (`go-cc[ client ] t) with convertValue {Γ}{Δ}{Φ} t
+    ... | t' , (Δ' , tCli) , (Φ' , tSer) = (_ , (tCli ； `exp {!t'!})) , (_ , tSer)
+    convertCont server (`go-cc[ server ] t) = {!!}
+    convertCont {Γ}{Δ}{Φ} client (`go-cc[ server ] t) with convertValue {Γ}{Δ}{Φ} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer) = ({!!} , {!!}) , ({!!} , {!!})
     convertCont server (`go-cc[ client ] t) = {!!}
     convertCont w (`call t u) with convertValue t
@@ -134,116 +138,123 @@ module LiftedMonomorphicToJS where
     ... | client = {!!} -- ({!!} +++ Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli ； {!!})) , (_ , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
     ... | server = {!!} -- (_ , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , ({!!} +++ Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer ； {!!}))
     convertCont w `halt = ([] , `nop) , ([] , `nop)
-    convertCont {Γ}{Δ}{Φ} w (`prim_`in_ {hs = hs} x t) with convertCont {hs +++ Γ}{Δ}{Φ} w t
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`prim_`in_ {hs = hs} x t) with convertCont {hs +++ Γ}{Δ}{Φ}{s = {!s!}}{s' = {!!}} w t
     convertCont client (`prim_`in_ {hs = hs} x t) | (Δ' , tCli) , (Φ' , tSer) = (_ , (tCli ； `prim (convertPrim x))) , (_ , tSer)
     convertCont server (`prim_`in_ {hs = hs} x t) | (Δ' , tCli) , (Φ' , tSer) = (_ , tCli) , (_ , (tSer ； `prim (convertPrim x)))
     convertCont w (`let τ , x `=unpack v `in t) = {!!}
-    convertCont {Γ}{Δ}{Φ} w (`open t `in u) with convertValue {Γ}{Δ}{Φ} t
-    ... | t' , (Δ' , tCli) , (Φ' , tSer) with convertCont {{!? +++ Γ!}}{Δ' +++ Δ}{Φ' +++ Φ} w u
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`open t `in u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | t' , (Δ' , tCli) , (Φ' , tSer) with convertCont {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = {!!}}{s' = {!!}} w u
     ... | (Δ'' , uCli) , (Φ'' , uSer) with w
-    ... | client = ({!!} , (tCli ； uCli ； {!!})) , (_ , (tSer ； uSer))
-    ... | server = (_ , (tCli ； uCli)) , ({!!} , (tSer ； uSer ； {!!}))
+    ... | client = (_ +++ Δ'' +++ Δ' , (tCli ； uCli ； {!!})) , (_ , (tSer ； uSer))
+    ... | server = (_ , (tCli ； uCli)) , (_ +++ Φ'' +++ Φ' , (tSer ； uSer ； {!!}))
 
-    convertValue : ∀ {Γ Δ Φ τ w} → Γ ⊢ᵐ ↓ τ < w >
-                 → convertCtx Γ ⊢ⱼ (convertType {w} τ) < w >
+    convertValue : ∀ {Γ Δ Φ τ w}
+                 → {s : only client (convertCtx Γ) ⊆ Δ}
+                 → {s' : only server (convertCtx Γ) ⊆ Φ}
+                 → Γ ⊢ᵐ ↓ τ < w >
+                 → (only w (convertCtx Γ)) ⊢ⱼ (convertType {w} τ) < w >
                    × Σ _ (λ δ → FnStm Δ ⇓ δ ⦂ nothing < client >)
                    × Σ _ (λ φ → FnStm Φ ⇓ φ ⦂ nothing < server >)
     convertValue `tt = `obj (("type" , `String , `string "unit") ∷ []) , ([] , `nop) , ([] , `nop)
     convertValue (`string s) = `string s , ([] , `nop) , ([] , `nop)
     convertValue `true = `true , ([] , `nop) , ([] , `nop)
     convertValue `false = `false , ([] , `nop) , ([] , `nop)
-    convertValue (` t ∧ u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t ∧ u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-          (` t' ∧ u') , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
-    convertValue (` t ∨ u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+        (` t' ∧ u') , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t ∨ u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-          (` t' ∨ u') , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
-    convertValue (`¬ t) with convertValue t
+        (` t' ∨ u') , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (`¬ t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | (t' , tCliPair , tSerPair) = (`¬ t') , tCliPair , tSerPair
     convertValue (`n x) = `n inj₁ x , ([] , `nop) , ([] , `nop)
-    convertValue (` t ≤ u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t ≤ u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-          (` t' ≤ u') , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
-    convertValue (` t + u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+        (` t' ≤ u') , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t + u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-          (` t' + u') , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
-    convertValue (` t * u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+        (` t' + u') , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t * u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-          (` t' * u') , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli)) , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
+        (` t' * u') , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
     convertValue (`v id ∈) = `v id (convert∈ ∈) , ([] , `nop) , ([] , `nop)
-    convertValue {Γ}{Δ}{Φ}{_}{client} (`λ x ⦂ σ ⇒ t) with convertCont {(x ⦂ σ < client >) ∷ []}{_}{_} client t
+    convertValue {Γ}{Δ}{Φ}{_}{client}{s = s}{s' = s'} (`λ x ⦂ σ ⇒ t)
+      with convertCont {(x ⦂ σ < client >) ∷ []}{_}{_}{s = sub-lemma (λ ())}{s' = λ ()} client t
     convertValue {w = client} (`λ x ⦂ σ ⇒ t) | (Δ' , tCli) , (Φ' , tSer) =
         (`λ x ∷ [] ⇒ (tCli ；return `undefined)) , ([] , `nop) , (_ , tSer)
-    convertValue {Γ}{Δ}{Φ}{_}{server} (`λ x ⦂ σ ⇒ t) with convertCont {(x ⦂ σ < server >) ∷ []}{_}{_} server t
+    convertValue {Γ}{Δ}{Φ}{_}{server}{s = s}{s' = s'} (`λ x ⦂ σ ⇒ t)
+      with convertCont {(x ⦂ σ < server >) ∷ []}{_}{_}{s = λ ()}{s' = sub-lemma (λ ())} server t
     convertValue {w = server} (`λ x ⦂ σ ⇒ t) | (Δ' , tCli) , (Φ' , tSer) =
-        (`λ x ∷ [] ⇒ (tSer ；return `undefined)) , (Δ' , tCli) , ([] , `nop)
-    convertValue (` t , u) with convertValue t
-    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ'}{Φ'} u
+        (`λ x ∷ [] ⇒ (tSer ；return `undefined)) , (_ , tCli) , ([] , `nop)
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (` t , u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | (t' , (Δ' , tCli) , (Φ' , tSer)) with convertValue {_}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} u
     ... | (u' , (Δ'' , uCli) , (Φ'' , uSer)) =
-            `obj (("type" , _ , `string "and") ∷ ("fst" , _ , t') ∷ ("snd" , _ , u') ∷ [])
-          , (Δ'' +++ Δ' , (tCli ； ⊆-fnstm-lemma ++ˡ uCli))
-          , (Φ'' +++ Φ' , (tSer ； ⊆-fnstm-lemma ++ˡ uSer))
-    convertValue (`inl t `as σ) with convertValue t
+        (`obj (("type" , _ , `string "and") ∷ ("fst" , _ , t') ∷ ("snd" , _ , u') ∷ [])) , (_ , (tCli ； uCli)) , (_ , (tSer ； uSer))
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (`inl t `as σ) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | (t' , tCliPair , tSerPair) =
           `obj (("type" , `String , `string "or") ∷
                 ("dir" , `String , `string "inl") ∷
                 ("inl" , _ , t') ∷ ("inr" , _ , default (convertType σ)) ∷ [])
         , tCliPair , tSerPair
-    convertValue (`inr t `as τ) with convertValue t
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (`inr t `as τ) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | (t' , tCliPair , tSerPair) =
           `obj (("type" , `String , `string "or") ∷
                 ("dir" , `String , `string "inr") ∷
                 ("inl" , _ , default (convertType τ)) ∷ ("inr" , _ , t') ∷ [])
           , tCliPair , tSerPair
-    convertValue (`hold {w = w} t) with convertValue t
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (`hold {w = w} t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | (t' , tCliPair , tSerPair) = {!t'!} , tCliPair , tSerPair
-    convertValue {w = w} (`sham C) with convertValue (C w) -- TODO revise
+    convertValue {Γ}{Δ}{Φ}{w = w}{s = s}{s' = s'}  (`sham C) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (C w) -- TODO revise
     ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
-    convertValue {w = w} (`Λ C) with convertValue (C w) -- TODO revise
+    convertValue {Γ}{Δ}{Φ}{w = w}{s = s}{s' = s'} (`Λ C) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (C w) -- TODO revise
     ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
-    convertValue (`pack ω t) with convertValue t -- TODO revise
+    convertValue {Γ}{Δ}{Φ}{w = w}{s = s}{s' = s'} (`pack ω t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t -- TODO revise
     ... | (t' , tCliPair , tSerPair) = (`λ "a" ∷ [] ⇒ `exp (⊆-exp-lemma there t')) , tCliPair , tSerPair
-    convertValue (`packΣ τ t) with convertValue t
+    convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} (`packΣ τ t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | (t' , tCliPair , tSerPair) = `packΣ (convertType τ) t' , tCliPair , tSerPair
-    convertValue {Γ}{w = w} (`buildEnv {Δ} pf) =
-          eq-replace (cong (λ v → _ ⊢ⱼ (`Object v < w >)) (pf' Δ pf w)) (`obj (envList Δ pf w))  , ([] , `nop) , ([] , `nop)
-      where
-        envList : (Δ : Contextᵐ) → Δ ⊆ Γ → (w : World) → List (Id × Σ Typeⱼ (λ τ → convertCtx Γ ⊢ⱼ (τ < w >)))
-        envList [] s w = []
-        envList ((x ⦂ τ < w' >) ∷ hs) s w with w decW w'
-        ... | no q = envList hs (s ∘ there) w
-        envList ((x ⦂ τ < w' >) ∷ hs) s .w' | yes refl =
-            ((x , convertType {w'} τ , `v x (convert∈ (s (here refl))))) ∷ envList hs (s ∘ there) w'
+    convertValue {Γ}{w = w} (`buildEnv {Δ} pf) = {!!}
+    --       eq-replace (cong (λ v → _ ⊢ⱼ (`Object v < w >)) (pf' Δ pf w)) (`obj (envList Δ pf w))  , ([] , `nop) , ([] , `nop)
+    --   where
+    --     envList : (Δ : Contextᵐ) → Δ ⊆ Γ → (w : World) → List (Id × Σ Typeⱼ (λ τ → convertCtx Γ ⊢ⱼ (τ < w >)))
+    --     envList [] s w = []
+    --     envList ((x ⦂ τ < w' >) ∷ hs) s w with w decW w'
+    --     ... | no q = envList hs (s ∘ there) w
+    --     envList ((x ⦂ τ < w' >) ∷ hs) s .w' | yes refl =
+    --         ((x , convertType {w'} τ , `v x (convert∈ (s (here refl))))) ∷ envList hs (s ∘ there) w'
 
-        pf' : (xs : _) (s : xs ⊆ Γ) (w : World) → toTypePairs (envList xs s w) ≡ hypsToPair {w} xs
-        pf' [] s w = refl
-        pf' ((x ⦂ τ < w' >) ∷ xs) s w with w decW w'
-        ... | no q = pf' xs (s ∘ there) w
-        pf' ((x ⦂ τ < w' >) ∷ xs) s .w' | yes refl = cong (λ l → (x , convertType τ) ∷ l) (pf' xs (s ∘ there) w')
+    --     pf' : (xs : _) (s : xs ⊆ Γ) (w : World) → toTypePairs (envList xs s w) ≡ hypsToPair {w} xs
+    --     pf' [] s w = refl
+    --     pf' ((x ⦂ τ < w' >) ∷ xs) s w with w decW w'
+    --     ... | no q = pf' xs (s ∘ there) w
+    --     pf' ((x ⦂ τ < w' >) ∷ xs) s .w' | yes refl = cong (λ l → (x , convertType τ) ∷ l) (pf' xs (s ∘ there) w')
 
   convertλ : ∀ {Γ} → (id : Id) (τ : Typeᵐ) (w : World) → [] ⊢ᵐ ↓ τ < w >
            → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ []) ⦂ nothing < w >
              × Σ _ (λ Γ → FnStm [] ⇓ Γ ⦂ nothing < client >)
              × Σ _ (λ Δ → FnStm [] ⇓ Δ ⦂ nothing < server >)
-  convertλ id τ w t with convertValue t
-  ... | t' , (Γ , tCli) , (Δ , tSer) = `var id (⊆-exp-lemma (λ ()) t'), (Γ , tCli) , (Δ , tSer)
-      -- `var id (⊆-exp-lemma (λ ()) t') , tCliPair , tSerPair
+  convertλ id τ w t with convertValue {[]}{[]}{[]}{s = λ ()}{s' = λ ()} t
+  ... | t' , (Γ , tCli) , (Δ , tSer) = `var id (⊆-exp-lemma pf t'), (Γ , tCli) , (Δ , tSer)
+    where
+      pf : ∀ {xs} → only w [] ⊆ xs
+      pf rewrite onlyEmpty {w} = λ ()
 
-  convertλs :
-             (lifted : List (Σ (Id × Typeᵐ × World) (λ { (id , σ , w') → [] ⊢ᵐ ↓ σ < w' >})))
-            → Σ _ (λ Γ → FnStm [] ⇓ Γ ⦂ nothing < client >) × Σ _ (λ Δ → FnStm [] ⇓ Δ ⦂ nothing < server >)
-  convertλs [] = ([] , `nop) , ([] , `nop)
-  convertλs (((id , σ , client) , t) ∷ xs) with convertλ {[]} id σ client t | convertλs  xs
-  ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , cliFnStm) , (Δ' , serFnStm) =
-        (_ , (cliFnStm ； ⊆-fnstm-lemma (λ ()) cli ； ⊆-fnstm-lemma (λ ()) fnStm)) , (_ , (serFnStm ； ⊆-fnstm-lemma (λ ()) ser))
-  convertλs (((id , σ , server) , t) ∷ xs) with convertλ {[]} id σ server t | convertλs  xs
-  ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , cliFnStm) , (Δ' , serFnStm) =
-        (_ , (cliFnStm ； ⊆-fnstm-lemma (λ ()) cli)) , (_ , (serFnStm ； ⊆-fnstm-lemma (λ ()) ser ； ⊆-fnstm-lemma (λ ()) fnStm))
+  convertλs : ∀ {xs} → Data.List.All.All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) xs
+            → Σ _ (λ { (Γ , Δ) → (FnStm [] ⇓ Γ ⦂ nothing < client > × only client (convertCtx (toCtx xs)) ⊆ Γ)
+                                 × (FnStm [] ⇓ Δ ⦂ nothing < server > × only server (convertCtx (toCtx xs)) ⊆ Δ) })
+  convertλs Data.List.All.[] = ([] , []) , ((`nop , (λ ())) , (`nop , (λ ())) )
+  convertλs (Data.List.All._∷_ {id , τ , client} t rest) with convertλ {[]} id τ client t | convertλs rest
+  ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , Δ') , (cliFnStm , s) , (serFnStm , s') =
+      (_ , _) , ((cliFnStm ； ⊆-fnstm-lemma (λ ()) cli ； ⊆-fnstm-lemma (λ ()) fnStm) , sub-lemma (++ʳ Γ ∘ s))
+              , ((serFnStm ； ⊆-fnstm-lemma (λ ()) ser) , ++ʳ Δ ∘ s')
+  convertλs (Data.List.All._∷_ {id , τ , server} t rest) with convertλ {[]} id τ server t | convertλs rest
+  ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , Δ') , (cliFnStm , s) , (serFnStm , s') =
+      (_ , _) , ((cliFnStm ； ⊆-fnstm-lemma (λ ()) cli ) , ++ʳ Γ ∘ s)
+              , ((serFnStm ； ⊆-fnstm-lemma (λ ()) ser ； ⊆-fnstm-lemma (λ ()) fnStm) , sub-lemma (++ʳ Δ ∘ s'))
 
   convertAll : ∀ {l1 l2} {A : Set l1} {P : A → Set l2} → (xs : List A) → Data.List.All.All (λ a → P a) xs → List (Σ A (λ a → P a))
   convertAll .[] Data.List.All.[] = []
@@ -254,10 +265,19 @@ module LiftedMonomorphicToJS where
   -- Returns JS code for client and server.
   entryPoint : ∀ {w}
              → Σ (List (Id × Typeᵐ × World))
-                  (λ newbindings → Data.List.All.All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (toCtx newbindings) ⊢ᵐ ⋆< w >)
+                  (λ newbindings → Data.List.All.All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings
+                                 × (LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< w >)
              → (Stm [] < client >) × (Stm [] < server >)
-  entryPoint (xs , all , t) with convertλs (convertAll _ all)
-  ... | (Γ' , cliFnStmLifted) , (Δ' , serFnStmLifted) with convertCont {toCtx xs}{Γ' +++ []}{Δ' +++ []} _ t
+  entryPoint (xs , all , t) with convertλs all
+  ... | (Γ' , Δ') , (cliFnStmLifted , s) , (serFnStmLifted , s')
+    with convertCont {toCtx xs}{Γ' +++ []}{Δ' +++ []}{s = ++ˡ ∘ s}{s' = ++ˡ ∘ s'} _ t
   ... | (δ , cliFnStm) , (φ , serFnStm) =
-      `exp ((` `λ [] ⇒ (cliFnStmLifted ； cliFnStm ；return `undefined) · Data.List.All.[]))
-    , `exp ((` `λ [] ⇒ (serFnStmLifted ； serFnStm ；return `undefined) · Data.List.All.[]))
+      {!!} , {!!}
+
+
+  -- entryPoint (xs , all , t) with convertλs (convertAll xs all)
+  -- ... | (Γ' , cliFnStmLifted) , (Δ' , serFnStmLifted)
+  --   with convertCont {toCtx xs}{Γ' +++ []}{Δ' +++ []}{s = {!!}}{s' = {!!}} _ t
+  -- ... | (δ , cliFnStm) , (φ , serFnStm) =
+  --    `exp ((` `λ [] ⇒ (cliFnStmLifted ； cliFnStm ；return `undefined) · Data.List.All.[]))
+  --  , `exp ((` `λ [] ⇒ (serFnStmLifted ； serFnStm ；return `undefined) · Data.List.All.[]))
