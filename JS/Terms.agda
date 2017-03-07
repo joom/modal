@@ -55,6 +55,7 @@ module JS.Terms where
       `_∧_ : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
       `_∨_ : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
       `¬_  : ∀ {w} → Γ ⊢ `Bool < w > → Γ ⊢ `Bool < w >
+      `_===_ : ∀ {τ w} {eq : EqType τ} → Γ ⊢ τ < w > → Γ ⊢ τ < w > → Γ ⊢ `Bool < w >
       -- ℕ terms
       `n_  : ∀ {w} → (ℤ ⊎ Float) → Γ ⊢ `Number < w >
       `_≤_ : ∀ {w} → Γ ⊢ `Number < w > → Γ ⊢ `Number < w > → Γ ⊢ `Bool < w >
@@ -129,6 +130,7 @@ module JS.Terms where
     ⊆-exp-lemma s (` t ∧ u) = ` ⊆-exp-lemma s t ∧ ⊆-exp-lemma s u
     ⊆-exp-lemma s (` t ∨ u) = ` ⊆-exp-lemma s t ∨ ⊆-exp-lemma s u
     ⊆-exp-lemma s (`¬ t) = `¬ ⊆-exp-lemma s t
+    ⊆-exp-lemma s (`_===_ {eq = eq} t u) = `_===_ {eq = eq} (⊆-exp-lemma s t) (⊆-exp-lemma s u)
     ⊆-exp-lemma s (`n x) = `n x
     ⊆-exp-lemma s (` t ≤ u) = ` ⊆-exp-lemma s t ≤ ⊆-exp-lemma s u
     ⊆-exp-lemma s (` t + u) = ` ⊆-exp-lemma s t + ⊆-exp-lemma s u

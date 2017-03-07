@@ -26,6 +26,12 @@ module JS.Types where
     `Object : List (Id × Type) → Type
     `Σt[t×[_×t]cont] : Type → Type
 
+  data EqType : Type → Set where
+    `UndefinedEq : EqType `Undefined
+    `BoolEq : EqType `Bool
+    `NumberEq : EqType `Number
+    `StringEq : EqType `String
+
   data Hyp : Set where
     _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
 

@@ -38,6 +38,7 @@ module JS.Source where
     termSource (` t ∧ u) = termSource t ++ " && " ++  termSource u
     termSource (` t ∨ u) =  termSource t ++ " || " ++ termSource u
     termSource (`¬ t) = "! " ++ termSource t
+    termSource (` t === u) =  termSource t ++ " === " ++ termSource u
     termSource (`n inj₁ x) = Data.Integer.show x
     termSource (`n inj₂ y) = Data.Float.show y
     termSource (` t ≤ u) = termSource t ++ " <= " ++ termSource u
