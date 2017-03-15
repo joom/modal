@@ -101,48 +101,44 @@ module LiftedMonomorphicToJS where
       with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} client u
     ... | (Δ'' , uCli) , (Φ'' , uSer)
       with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} client v
-    ... | (Δ''' , vCli) , (Φ''' , vSer)
-      with reconcileTerms uCli vCli | reconcileTerms uSer vSer
-    ... | uCli' , vCli' | uSer' , vSer' =
-          (_ , (tCli ； (`if ⊆-exp-lemma (++ʳ Δ' ∘ s) t' `then uCli' `else vCli')))
+    ... | (Δ''' , vCli) , (Φ''' , vSer) =
+          (_ , (tCli ； (`if ⊆-exp-lemma (++ʳ Δ' ∘ s) t' `then uCli `else vCli)))
         , (_ , (tSer ； (uSer ； ⊆-fnstm-lemma (++ʳ Φ'') vSer)))
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`if t `then u `else v) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer)
       with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} server u
     ... | (Δ'' , uCli) , (Φ'' , uSer)
       with convertCont {Γ}{Δ' +++ Δ}{Φ' +++ Φ}{s = ++ʳ Δ' ∘ s}{s' = ++ʳ Φ' ∘ s'} server v
-    ... | (Δ''' , vCli) , (Φ''' , vSer)
-      with reconcileTerms uCli vCli | reconcileTerms uSer vSer
-    ... | uCli' , vCli' | uSer' , vSer' =
+    ... | (Δ''' , vCli) , (Φ''' , vSer) =
           (_ , (tCli ； (uCli ； ⊆-fnstm-lemma (++ʳ Δ'') vCli)))
-        , (_ , (tSer ； (`if ⊆-exp-lemma (++ʳ Φ' ∘ s') t' `then uSer' `else vSer')))
+        , (_ , (tSer ； (`if ⊆-exp-lemma (++ʳ Φ' ∘ s') t' `then uSer `else vSer)))
 
     -- ∨ case
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`letcase x , y `= t `in u `or v) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
-    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`letcase x , y `= t `in u `or v) | t' , (Δ' , tCli) , (Φ' , tSer)
-      with convertCont {_}{_ ∷ _ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = {!!}}{s' = ++ʳ Φ' ∘ s'} client u
-      -- with convertCont {_}{_ ∷ _ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = sub-lemma (sub-lemma (++ʳ Δ' ∘ s))}{s' = ++ʳ Φ' ∘ s'} client u
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`letcase_,_`=_`in_`or_ {τ = τ}{σ = σ} x y t u v) | t' , (Δ' , tCli) , (Φ' , tSer)
+      with convertCont {_}{_ ∷ _ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = sub-lemma (there ∘ ++ʳ Δ' ∘ s)}{s' = ++ʳ Φ' ∘ s'} client u
     ... | (Δ'' , uCli) , (Φ'' , uSer)
-      with convertCont {_}{_ ∷ _ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = {!!}}{s' = ++ʳ Φ' ∘ s'} client v
+      with convertCont {_}{_ ∷ _ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = sub-lemma (there ∘ ++ʳ Δ' ∘ s)}{s' = ++ʳ Φ' ∘ s'} client v
     ... | (Δ''' , vCli) , (Φ''' , vSer) =
-            (_ , (tCli ； (`if `_===_ {eq = `StringEq} (⊆-exp-lemma {!!} (`proj t' "dir" (there (here refl)))) (`string "inl")
-                           `then (`var x (⊆-exp-lemma (++ʳ Δ' ∘ s) (`proj t' "inl" (there (there (here refl)))))
-                                  ； `var y (default _) ； {!uCli!})
-                           `else (`var x (default _)
-                                  ； `var y (⊆-exp-lemma (there ∘ ++ʳ Δ' ∘ s) (`proj t' "inr" (there (there (there (here refl)))))) ； {!!}) )))
+            (_ , (tCli ； (`if `_===_ {eq = `StringEq} (⊆-exp-lemma (++ʳ Δ' ∘ s) (`proj t' "dir" (there (here refl)))) (`string "inl")
+                           `then (`var y (default (convertType {client} σ))
+                                 ； `var x (⊆-exp-lemma (there ∘ ++ʳ Δ' ∘ s) (`proj t' "inl" (there (there (here refl))))) ； uCli)
+                           `else (`var x (default (convertType {client} τ))
+                                 ； `var y (⊆-exp-lemma (there ∘ ++ʳ Δ' ∘ s) (`proj t' "inr" (there (there (there (here refl)))))) ； vCli) )))
           , (_ , (tSer ； (uSer ； ⊆-fnstm-lemma (++ʳ Φ'') vSer)))
-    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`letcase x , y `= t `in u `or v) | t' , (Δ' , tCli) , (Φ' , tSer)
-      with convertCont {_}{Δ' +++ Δ}{_ ∷ (Φ' +++ Φ)}{s = ++ʳ Δ' ∘ s}{s' = sub-lemma (++ʳ Φ' ∘ s')} server u
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`letcase_,_`=_`in_`or_ {τ = τ}{σ = σ} x y t u v) | t' , (Δ' , tCli) , (Φ' , tSer)
+      with convertCont {_}{Δ' +++ Δ}{_ ∷ _ ∷ (Φ' +++ Φ)}{s = ++ʳ Δ' ∘ s}{s' = sub-lemma (there ∘ ++ʳ Φ' ∘ s')} server u
     ... | (Δ'' , uCli) , (Φ'' , uSer)
-      with convertCont {_}{Δ' +++ Δ}{_ ∷ (Φ' +++ Φ)}{s = ++ʳ Δ' ∘ s}{s' = sub-lemma (++ʳ Φ' ∘ s')} server v
-    ... | (Δ''' , vCli) , (Φ''' , vSer) = {!!}
+      with convertCont {_}{Δ' +++ Δ}{_ ∷ _ ∷ (Φ' +++ Φ)}{s = ++ʳ Δ' ∘ s}{s' = sub-lemma (there ∘ ++ʳ Φ' ∘ s')} server v
+    ... | (Δ''' , vCli) , (Φ''' , vSer) =
+            (_ , (tCli ； (uCli ； ⊆-fnstm-lemma (++ʳ Δ'') vCli)))
+          , (_ , (tSer ； (`if `_===_ {eq = `StringEq} (⊆-exp-lemma (++ʳ Φ' ∘ s') (`proj t' "dir" (there (here refl)))) (`string "inl")
+                           `then (`var y (default (convertType {server} σ)) ；
+                                  `var x (⊆-exp-lemma (there ∘ ++ʳ Φ' ∘ s') (`proj t' "inl" (there (there (here refl))))) ； uSer)
+                           `else (`var x (default (convertType {server} τ)) ；
+                                  `var y (⊆-exp-lemma (there ∘ ++ʳ Φ' ∘ s') (`proj t' "inr" (there (there (there (here refl)))))) ； vSer) )))
 
-    --   with reconcileTerms uCli vCli | reconcileTerms uSer vSer
-    -- ... | uCli' , vCli' | uSer' , vSer' =
-        --   (_ , (tCli ； (?)))
-        -- , (_ , (tSer ； (uSer ； ⊆-fnstm-lemma (++ʳ Φ'') vSer)))
-
-    -- convertCont server (`letcase x , y `= t `in u `or v) = {!!}
+    -- Elim rules
     convertCont w (`leta x `= t `in u) = {!!}
     convertCont w (`lets u `= t `in v) = {!!}
     convertCont w (`put u `= t `in v) = {!!}

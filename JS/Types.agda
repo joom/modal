@@ -164,3 +164,10 @@ module JS.Types where
   onlyEmpty : ∀ {w} → only w [] ≡ []
   onlyEmpty {client} = refl
   onlyEmpty {server} = refl
+
+  _∩_ : (Γ Γ' : Context) → Context
+  [] ∩ _ = []
+  _ ∩ [] = []
+  (x ∷ xs) ∩ (y ∷ ys) with x decHyp y
+  ... | no q = xs ∩ ys
+  (x ∷ xs) ∩ (.x ∷ ys) | yes refl = x ∷ (xs ∩ ys)

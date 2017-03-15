@@ -92,7 +92,7 @@ module JS.Terms where
       `assign : ∀ {Γ τ w mσ} → (id : Id) → (t : Γ ⊢ τ < w >) → (id ⦂ τ < w >) ∈ Γ → FnStm Γ ⇓ [] ⦂ mσ < w >
       _；return_ : ∀ {Γ γ τ w} → FnStm Γ ⇓ γ ⦂ nothing < w > → (γ +++ Γ) ⊢ τ < w > → FnStm Γ ⇓ γ ⦂ (just τ) < w >
       _；_ : ∀ {Γ γ γ' w mσ} → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm (γ +++ Γ) ⇓ γ' ⦂ mσ < w > → FnStm Γ ⇓ (γ' +++ γ) ⦂ mσ < w >
-      `if_`then_`else_ : ∀ {Γ γ w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ ⦂ mσ < w >
+      `if_`then_`else_ : ∀ {Γ γ γ' w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ' ⦂ mσ < w > → FnStm Γ ⇓ γ ∩ γ' ⦂ mσ < w >
       `prim : ∀ {Γ hs mσ w} → (x : Prim hs) → FnStm Γ ⇓ (hs +++ []) ⦂ mσ < w >
 
     toTypePairs : ∀ {Γ w} → List (Id × Σ Type (λ τ → Γ ⊢ τ < w >)) → List (Id × Type)
@@ -168,10 +168,3 @@ module JS.Terms where
 
     -- ⊆-fnstm-lemma2 : ∀ {Γ γ γ' mσ w} → γ ⊆ γ' → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ' ⦂ mσ < w >
     -- ⊆-fnstm-lemma2 s t = {!!}
-
-    -- TODO
-    postulate
-      reconcileTerms : ∀ {Γ Γ' Γ'' mσ w}
-              → FnStm Γ ⇓ Γ' ⦂ mσ < w >
-              → FnStm Γ ⇓ Γ'' ⦂ mσ < w >
-              → FnStm Γ ⇓ (reconcileCtxs Γ' Γ'') ⦂ mσ < w > × FnStm Γ ⇓ (reconcileCtxs Γ' Γ'') ⦂ mσ < w >
