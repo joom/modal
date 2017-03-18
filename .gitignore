@@ -1,7 +1,12 @@
 # Agda
 *.agdai
+MAlonzo
 
 # Vim
 *.vim
 
 .DS_Store
+
+program_cli.js
+program_ser.js
+Compile

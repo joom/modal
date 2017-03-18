@@ -21,6 +21,9 @@ module Definitions where
   open import Data.Empty
   open import Function
 
+  postulate
+    trustMe : ∀ {ℓ}{A : Set ℓ} → A
+
   isJust : ∀ {ℓ} {A : Set ℓ} → Maybe A → Set
   isJust (just _) = Data.Unit.⊤
   isJust _ = ⊥
@@ -102,3 +105,7 @@ module Definitions where
   ⊆-add : ∀ {l}{A : Set l}{x : A} {xs ys : List A} → xs ⊆ ys → x ∈ ys → (x ∷ xs) ⊆ ys
   ⊆-add s i (here refl) = i
   ⊆-add s i (there i') = s i'
+
+  -- like *** in Haskell's Control.Arrow
+  _***_ : ∀ {b c b' c'}{B : Set b}{C : Set c}{B' : Set b'}{C' : Set c'} → (B → B') → (C → C') → B × C → B' × C'
+  (f *** g) (x , y) = (f x , g y)

@@ -36,6 +36,9 @@ module Example where
   open import CPStoClosure
   open import LambdaLifting
   open import LiftedMonomorphize
+  open import LiftedMonomorphicToJS
+
+  -- example programs
 
   logVersion : [] ⊢₅ `Unit < client >
   logVersion =
@@ -57,6 +60,13 @@ module Example where
   logVersionMonomorphize : Σ (List (Id × Typeᵐ × World))
                           (λ newbindings → All (λ { (_ , σ , w') → [] ⊢ᵐ ↓ σ < w' > }) newbindings × (LiftedMonomorphic.Types.toCtx newbindings) ⊢ᵐ ⋆< client >)
   logVersionMonomorphize = LiftedMonomorphize.entryPoint logVersionLifting
+
+  logVersionJS : Stm [] < client > × Stm [] < server >
+  logVersionJS = LiftedMonomorphicToJS.entryPoint logVersionMonomorphize
+
+  logVersionOutputJS : String × String
+  logVersionOutputJS with logVersionJS
+  ... | (cliStm , serStm) = stmSource cliStm , stmSource serStm
 
   ----------------------------------------------------------
 
