@@ -22,13 +22,13 @@ module LiftedMonomorphic.Terms where
   open import Definitions
 
   -- Valid values and values of the primitives of our language.
-  data Prim : List Hyp → Set where
-    `alert : Prim [ "alert" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client > ]
-    `version : Prim [ "version" ⦂ `String < server > ]
-    `log : Prim ("log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < client > ∷
-                 "log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < server > ∷ [])
-    `prompt : Prim [ "prompt" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < client > ]
-    `readFile : Prim [ "readFile" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < server > ]
+  data Prim : Hyp → Set where
+    `alert : Prim ( "alert" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client > )
+    `version : Prim ( "version" ⦂ `String < server > )
+    `logCli : Prim ("log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < client >)
+    `logSer : Prim ("log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < server >)
+    `prompt : Prim ( "prompt" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < client > )
+    `readFile : Prim ( "readFile" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < server > )
 
   -- Terms that have to type check by definition.
   infixl 5 _⊢_
@@ -75,7 +75,7 @@ module LiftedMonomorphic.Terms where
     `call : ∀ {τ w} → Γ ⊢ ↓ ` τ cont < w > → Γ ⊢ ↓ τ < w > → Γ ⊢ ⋆< w >
     `halt : ∀ {w} → Γ ⊢ ⋆< w >
     -- Primitive imports
-    `prim_`in_ : ∀ {hs w} → (x : Prim hs) → (hs ++ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `prim_`in_ : ∀ {h w} → (x : Prim h) → (h ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     -- Closure terms
     `go-cc[_]_ : ∀ {w} → (w' : World)
                          → Γ ⊢ ↓ `Σt[t×[ `Unit ×t]cont] < w' >
@@ -110,7 +110,7 @@ module LiftedMonomorphic.Terms where
     ⊆-cont-lemma s (`go-cc[ w' ] u) = `go-cc[ w' ] (⊆-term-lemma s u)
     ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
     ⊆-cont-lemma s `halt = `halt
-    ⊆-cont-lemma s (`prim_`in_ {hs} x t) = `prim x `in ⊆-cont-lemma (Data.List.Any.Membership._++-mono_ {xs₁ = hs} id s) t
+    ⊆-cont-lemma s (`prim_`in_ {h} x t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t
     ⊆-cont-lemma s (`let α , x `=unpack v `in t) = `let α , x `=unpack (⊆-term-lemma s v) `in ⊆-cont-lemma (sub-lemma s) t
     ⊆-cont-lemma {Γ} {Γ'} s (`open_`in_ {Δ} t u) = `open ⊆-term-lemma s t `in ⊆-cont-lemma pf u
       where

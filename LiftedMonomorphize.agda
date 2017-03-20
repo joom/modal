@@ -91,16 +91,18 @@ module LiftedMonomorphize where
   convertMobile (`∃ᵐ m) = `∃ᵐ (convertMobile m)
   convertMobile `⌘ᵐ = `⌘ᵐ
 
-  convertPrim : ∀ {h} → Closure.Terms.Prim h → LiftedMonomorphic.Terms.Prim (convertCtx (h ∷ []))
-  convertPrim `alert = `alert
-  convertPrim `version = `version
-  convertPrim `log = `log
-  convertPrim `prompt = `prompt
-  convertPrim `readFile = `readFile
-
   hypLocalize : Hypₒ → World → Hypᵐ
   hypLocalize (x ⦂ τ < w >) w' = x ⦂ convertType τ < w >
   hypLocalize (u ∼ C) w = u ⦂ convertType (C w) < w >
+
+  convertPrim : ∀ {h} → Closure.Terms.Prim h → (w : World) → LiftedMonomorphic.Terms.Prim (hypLocalize h w)
+  convertPrim `alert w = `alert
+  convertPrim `version w = `version
+  convertPrim `log client = `logCli
+  convertPrim `log server = `logSer
+  convertPrim `prompt w = `prompt
+  convertPrim `readFile w = `readFile
+
 
   convert∈ : ∀ {ω} → (Γ : Contextₒ) → (h : Hypₒ) → h ∈ Γ → hypLocalize h ω ∈ convertCtx Γ
   convert∈ _ (x ⦂ τ < w >) (here refl) = here refl
@@ -152,8 +154,9 @@ module LiftedMonomorphize where
     convertCont (`let x =`unpack t `in u) = `let x =`unpack convertValue t `in (λ ω → convertCont (u ω))
     convertCont (`call t u) = `call (convertValue t) (convertValue u)
     convertCont `halt = `halt
-    convertCont (`prim_`in_ {h = h} x t) =
-        `prim convertPrim x `in eq-replace (sym (cong (λ l → l ⊢ᵐ ⋆< _ >) (convertCtx++ {h ∷ []}))) (convertCont t)
+    convertCont (`prim_`in_ {h} p t) with h
+    ... | x ⦂ τ < w > = `prim convertPrim p w `in convertCont t
+    ... | u ∼ x = `prim convertPrim p server `in (`prim convertPrim p client `in convertCont t)
     convertCont (`go-cc[ w' ] t) = `go-cc[ w' ] convertValue t
     convertCont (`let τ , x `=unpack t `in u) = `let convertType τ , x `=unpack convertValue t `in convertCont u
     convertCont (`open_`in_ {Δ = Δ}{w = w} t u) =

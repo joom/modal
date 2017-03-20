@@ -106,6 +106,9 @@ module Definitions where
   ⊆-add s i (here refl) = i
   ⊆-add s i (there i') = s i'
 
+  ⊆-≡ : ∀ {l}{A : Set l}{xs ys : List A} → xs ≡ ys → xs ⊆ ys
+  ⊆-≡ refl = id
+
   -- like *** in Haskell's Control.Arrow
   _***_ : ∀ {b c b' c'}{B : Set b}{C : Set c}{B' : Set b'}{C' : Set c'} → (B → B') → (C → C') → B × C → B' × C'
   (f *** g) (x , y) = (f x , g y)

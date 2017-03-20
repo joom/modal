@@ -27,19 +27,19 @@ module JS.Terms where
 
   open import Definitions
 
-  data Prim : List Hyp → Set where
-    `alert : Prim [ "alert" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client > ]
-    `version : Prim [ "version" ⦂ `String < server > ]
-    `log : Prim (("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client >)
-               ∷ ("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < server >) ∷ [])
-    `prompt : Prim [ ("prompt" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < client >) ]
-    `readFile : Prim [ ("readFile" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < server >) ]
+  data Prim : Hyp → Set where
+    `alert : Prim ( "alert" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client > )
+    `version : Prim ( "version" ⦂ `String < server > )
+    `logCli : Prim ("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < client >)
+    `logSer : Prim ("log" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `Object (("type" , `String) ∷ []) ×t]cont]) ∷ []) ×t]cont] < server >)
+    `prompt : Prim ( "prompt" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < client > )
+    `readFile : Prim ( "readFile" ⦂ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < server > )
     -- PRIMITIVES FOR WEB SOCKETS
     -- (not accessible in other intermediate languages, only for compilation to JS)
-    `socket : Prim [ "socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
-                                       ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client > ]
-    `io : Prim [ "io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
-                               ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server > ]
+    `socket : Prim ( "socket" ⦂ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined)
+                                       ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < client > )
+    `io : Prim ( "io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
+                               ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server > )
 
 
   infixl 5 _⊢_
@@ -93,7 +93,7 @@ module JS.Terms where
       _；return_ : ∀ {Γ γ τ w} → FnStm Γ ⇓ γ ⦂ nothing < w > → (γ +++ Γ) ⊢ τ < w > → FnStm Γ ⇓ γ ⦂ (just τ) < w >
       _；_ : ∀ {Γ γ γ' w mσ} → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm (γ +++ Γ) ⇓ γ' ⦂ mσ < w > → FnStm Γ ⇓ (γ' +++ γ) ⦂ mσ < w >
       `if_`then_`else_ : ∀ {Γ γ γ' w mσ} → Γ ⊢ `Bool < w > → FnStm Γ ⇓ γ ⦂ mσ < w > → FnStm Γ ⇓ γ' ⦂ mσ < w > → FnStm Γ ⇓ γ ∩ γ' ⦂ mσ < w >
-      `prim : ∀ {Γ hs mσ w} → (x : Prim hs) → FnStm Γ ⇓ (hs +++ []) ⦂ mσ < w >
+      `prim : ∀ {Γ h mσ w} → (x : Prim h) → FnStm Γ ⇓ (h ∷ []) ⦂ mσ < w >
 
     toTypePairs : ∀ {Γ w} → List (Id × Σ Type (λ τ → Γ ⊢ τ < w >)) → List (Id × Type)
     toTypePairs [] = []
