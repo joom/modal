@@ -41,11 +41,15 @@ module Example where
   -- example programs
 
   logVersion : [] ⊢₅ `Unit < client >
-  logVersion =
-    `prim `version `in
-    `prim `log `in
-    (` `val (`vval "log" (here refl))
-     · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
+  logVersion = ` `val (`λ "x" ⦂ `Unit ⇒ `val `tt) · `val `tt
+
+  -- logVersion = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
+
+  -- logVersion =
+  --   `prim `version `in
+  --   `prim `log `in
+  --   (` `val (`vval "log" (here refl))
+  --    · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
 
   logVersionCPS : [] ⊢ₓ ⋆< client >
   logVersionCPS = ML5toCPS.convertExpr (λ v → `halt) logVersion

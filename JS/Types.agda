@@ -152,10 +152,20 @@ module JS.Types where
   onlyCliCtx ((x ⦂ τ < client >) ∷ xs) = (x ⦂ τ < client >) ∷ onlyCliCtx xs
   onlyCliCtx ((x ⦂ τ < server >) ∷ xs) = onlyCliCtx xs
 
+  onlyCliCtx++ : ∀ {xs ys} → onlyCliCtx (xs ++ ys) ≡ onlyCliCtx xs ++ onlyCliCtx ys
+  onlyCliCtx++ {[]} = refl
+  onlyCliCtx++ {(x ⦂ τ < client >) ∷ xs} = cong (λ l → (x ⦂ τ < client >) ∷ l) (onlyCliCtx++ {xs})
+  onlyCliCtx++ {(x ⦂ τ < server >) ∷ xs} = onlyCliCtx++ {xs}
+
   onlySerCtx : Context → Context
   onlySerCtx [] = []
   onlySerCtx ((x ⦂ τ < server >) ∷ xs) = (x ⦂ τ < server >) ∷ onlySerCtx xs
   onlySerCtx ((x ⦂ τ < client >) ∷ xs) = onlySerCtx xs
+
+  onlySerCtx++ : ∀ {xs ys} → onlySerCtx (xs ++ ys) ≡ onlySerCtx xs ++ onlySerCtx ys
+  onlySerCtx++ {[]} = refl
+  onlySerCtx++ {(x ⦂ τ < server >) ∷ xs} = cong (λ l → (x ⦂ τ < server >) ∷ l) (onlySerCtx++ {xs})
+  onlySerCtx++ {(x ⦂ τ < client >) ∷ xs} = onlySerCtx++ {xs}
 
   only : World → Context → Context
   only client xs = onlyCliCtx xs

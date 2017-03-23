@@ -22,7 +22,7 @@ module Definitions where
   open import Function
 
   postulate
-    trustMe : ∀ {ℓ}{A : Set ℓ} → A
+    trustMe trustMe1 trustMe2 trustMe3 trustMe4 trustMe5 trustMe6 trustMe7 trustMe8 : ∀ {ℓ}{A : Set ℓ} → A
 
   isJust : ∀ {ℓ} {A : Set ℓ} → Maybe A → Set
   isJust (just _) = Data.Unit.⊤
@@ -97,6 +97,10 @@ module Definitions where
   sub-lemma : ∀ {l} {A : Set l} {Γ Δ : List A} {h : A} → Γ ⊆ Δ → (h ∷ Γ) ⊆ (h ∷ Δ)
   sub-lemma s (here refl) = here refl
   sub-lemma s (there i) = there (s i)
+
+  sub-lemma' : ∀ {l} {A : Set l} {Γ Δ : List A} {h : A} → (h ∷ Γ) ⊆ Δ → Γ ⊆ Δ
+  sub-lemma' s (here refl) = s (there (here refl))
+  sub-lemma' s (there i) = s (there (there i))
 
   sub-lemma-list : ∀ {l} {A : Set l} {Γ Δ : List A} {γ : List A} → Γ ⊆ Δ → (γ +++ Γ) ⊆ (γ +++ Δ)
   sub-lemma-list {γ = []} s = s
