@@ -59,7 +59,7 @@ module LiftedMonomorphicToJS where
     convertType {w} ` τ cont = `Function [ convertType {w} τ ] `Undefined
     convertType {w} (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType {w} τ ) ∷ ("snd" , convertType {w} σ) ∷ [])
     convertType {w} (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType {w} τ) ∷ ("inr" , convertType {w} σ) ∷ [])
-    convertType {w} (` τ at w') = ?
+    convertType {w} (` τ at w') = convertType {w} τ
     convertType {w} (`⌘ C) = convertType {w} (C w)
     convertType {w} (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
     convertType {w} (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
@@ -148,7 +148,7 @@ module LiftedMonomorphicToJS where
                                   `var y (⊆-exp-lemma (there ∘ ++ʳ Φ' ∘ s') (`proj t' "inr" (there (there (there (here refl)))))) ； vSer) )))
 
     -- Elim rules
-    convertCont w (`leta x `= t `in u) = ?
+    convertCont w (`leta x `= t `in u) = trustMe
 
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`lets u `= t `in v)
       with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
@@ -275,14 +275,6 @@ module LiftedMonomorphicToJS where
     ... | (Δ'' , uCli) , (Φ'' , uSer) =
           (_ , (tCli ； (openEnv {Δ' +++ Δ}{δ}{δ} id (eq-replace trustMe (`obj {Δ' +++ Δ}{client} [])) ； uCli)))
         , (_ , (tSer ； (openEnv {Φ' +++ Φ}{δ}{δ} id (⊆-exp-lemma (++ʳ Φ' ∘ s') t') ； uSer)))
-
-    -- hypsToPairWrongWorld : ∀ {Γ δ w w'} → ¬ (w ≡ w') → Γ ⊢ⱼ `Object (hypsToPair {w} δ) < w' > ≡ Γ ⊢ⱼ `Object [] < w' >
-    -- hypsToPairWrongWorld {w = client} {client} neq = ⊥-elim (neq refl)
-    -- hypsToPairWrongWorld {w = server} {server} neq = ⊥-elim (neq refl)
-    -- hypsToPairWrongWorld {δ = []} {client} {server} neq = refl
-    -- hypsToPairWrongWorld {δ = (x ⦂ τ < client >) ∷ δ} {client} {server} neq = {!!}
-    -- hypsToPairWrongWorld {δ = (x ⦂ τ < server >) ∷ δ} {client} {server} neq = hypsToPairWrongWorld {δ = δ} neq
-    -- hypsToPairWrongWorld {δ = xs} {w = server} {client} neq = {!!}
 
     hypsToPair∈ : ∀ {Δ x τ w} → (x ⦂ τ < w >) ∈ Δ → (x , convertType {w} τ) ∈ hypsToPair {w} Δ
     hypsToPair∈ {w = w} (here refl) with w decW w

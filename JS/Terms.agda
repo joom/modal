@@ -41,7 +41,6 @@ module JS.Terms where
     `io : Prim ( "io" ⦂ `Object (("on" , `Function (`String ∷ `Object (("on" , `Function (`String ∷ `Function (`String ∷ []) `Undefined ∷ []) `Undefined) ∷ []) ∷ []) `Undefined)
                                ∷ ("emit" , `Function (`String ∷ `String ∷ []) `Undefined) ∷ []) < server > )
 
-
   infixl 5 _⊢_
   infixl 4 _；_
   infixl 4 _；return_

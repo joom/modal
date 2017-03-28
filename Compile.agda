@@ -58,7 +58,10 @@ module Compile where
   compile = writeToFile "program_" ∘ compileToJS
 
   program : [] ⊢₅ `Unit < client >
-  program = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
-  -- program = `prim `alert `in `val `tt
+  -- program = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
+  program = `prim `alert `in `val `tt
+  -- program = ` `val (`λ "x" ⦂ `Unit ⇒ `val `tt) · `val `tt
+  -- program = `prim `alert `in `prim `prompt `in
+  --           (` `val (`v "alert" (there (here refl))) · (` `val (`v "prompt" (here refl)) · `val (`string "Write something")))
 
   main = run (compile program)
