@@ -43,6 +43,7 @@ module ML5toCPS where
 
   convertPrim : ∀ {h} → ML5.Terms.Prim h → CPS.Terms.Prim (convertHyp h)
   convertPrim `alert = `alert
+  convertPrim `write = `write
   convertPrim `version = `version
   convertPrim `log = `log
   convertPrim `prompt = `prompt
@@ -54,9 +55,6 @@ module ML5toCPS where
   convert∈ : ∀ {h Γ} → h ∈ Γ → (convertHyp h) ∈ (convertCtx Γ)
   convert∈ (here px) = here (cong convertHyp px)
   convert∈ (there i) = there (convert∈ i)
-
-  ⊆-∈-lemma : ∀ {h} {Γ Γ' : CPS.Types.Context} → Γ ⊆ Γ' → h ∈ Γ → h ∈ Γ'
-  ⊆-∈-lemma sub i = sub i
 
   convertMobile : ∀ {τ} → ML5.Types._mobile τ → CPS.Types._mobile (convertType τ)
   convertMobile `Boolᵐ = `Boolᵐ
@@ -83,14 +81,14 @@ module ML5toCPS where
     convertValue' {s = s} (` t ≤ u) = ` (convertValue' {s = s} t) ≤ (convertValue' {s = s} u)
     convertValue' {s = s} (` t + u) = ` (convertValue' {s = s} t) + (convertValue' {s = s} u)
     convertValue' {s = s} (` t * u) = ` (convertValue' {s = s} t) * (convertValue' {s = s} u)
-    convertValue' {s = s} (`v x ∈) = `v x (⊆-∈-lemma s (convert∈ ∈))
-    convertValue' {s = s} (`vval u ∈) = `vval u (⊆-∈-lemma s (convert∈ ∈))
+    convertValue' {s = s} (`v x ∈) = `v x (s (convert∈ ∈))
+    convertValue' {s = s} (`vval u ∈) = `vval u (s (convert∈ ∈))
     convertValue' {s = s} (`λ x ⦂ σ ⇒ t) =
       `λ (x ++ "_y") ⦂ (` (convertType σ) × ` _ cont) ⇒
       (`let x `=fst (`v (x ++ "_y") (here refl)) `in
        convertExpr' {s = sub-lemma (there ∘ s)}
                    (λ {_}{s'} v →
-                   `let (x ++ "_k") `=snd `v (x ++ "_y") (⊆-∈-lemma s' (there (here refl)))
+                   `let (x ++ "_k") `=snd `v (x ++ "_y") (s' (there (here refl)))
                    `in (`call (`v (x ++ "_k") (here refl)) (⊆-term-lemma there v))) t)
     convertValue' {s = s} (` t , u) = ` (convertValue' {s = s} t) , (convertValue' {s = s} u)
     convertValue' {s = s} (`inl t `as σ) = `inl (convertValue' {s = s} t) `as (convertType σ)
@@ -102,7 +100,7 @@ module ML5toCPS where
 
     convertExpr' : ∀ {Γ Γ' τ w}
                 → {s : (convertCtx Γ) ⊆ Γ'}
-                → (∀ {Γ''} {s' : Γ' ⊆ Γ''} → Γ'' ⊢ₓ ↓ (convertType τ) < w > → Γ'' ⊢ₓ ⋆< w >)
+                → (K : ∀ {Γ''} {s' : Γ' ⊆ Γ''} → Γ'' ⊢ₓ ↓ (convertType τ) < w > → Γ'' ⊢ₓ ⋆< w >)
                 → Γ ⊢₅ τ < w >
                 → Γ' ⊢ₓ ⋆< w >
     convertExpr' {s = s} K (`if b `then t `else u) =
@@ -140,7 +138,7 @@ module ML5toCPS where
   -- Corollary
   -- For some reason it was easier to prove the ones above.
   convertExpr : ∀ {Γ τ w}
-              → (∀ {Γ'} {s' : (convertCtx Γ) ⊆ Γ'} → Γ' ⊢ₓ ↓ (convertType τ) < w > → Γ' ⊢ₓ ⋆< w >)
+              → (K : ∀ {Γ'} {s' : (convertCtx Γ) ⊆ Γ'} → Γ' ⊢ₓ ↓ (convertType τ) < w > → Γ' ⊢ₓ ⋆< w >)
               → Γ ⊢₅ τ < w >
               → (convertCtx Γ) ⊢ₓ ⋆< w >
   convertExpr K t = convertExpr' {s = id} (λ {Δ}{s'} → K {_}{s'}) t

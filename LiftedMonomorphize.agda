@@ -97,6 +97,7 @@ module LiftedMonomorphize where
 
   convertPrim : ∀ {h} → Closure.Terms.Prim h → (w : World) → LiftedMonomorphic.Terms.Prim (hypLocalize h w)
   convertPrim `alert w = `alert
+  convertPrim `write w = `write
   convertPrim `version w = `version
   convertPrim `log client = `logCli
   convertPrim `log server = `logSer
@@ -146,8 +147,8 @@ module LiftedMonomorphize where
     convertCont (`letcase x , y `= t `in u `or v) = `letcase x , y `= convertValue t `in convertCont u `or convertCont v
     convertCont (`leta x `= t `in u) = `leta x `= convertValue t `in convertCont u
     convertCont (`lets u `= t `in v) = `lets u `= convertValue t `in convertCont v
-    convertCont (`put_`=_`in_ {C = C}{m = m} u t v) =
-        `put_`=_`in_ {C = λ ω → convertType (C ω)} {m = convertMobile m} u (convertValue t) (convertCont v)
+    convertCont (`put_`=_`in_ {m = m} u t v) =
+        `put_`=_`in_ {m = convertMobile m} u (convertValue t) (convertCont v)
     convertCont (`let x `=fst t `in u) = `let x `=fst convertValue t `in convertCont u
     convertCont (`let x `=snd t `in u) = `let x `=snd convertValue t `in convertCont u
     convertCont (`let x `= t ⟨ w' ⟩`in u) = `let x `= convertValue t ⟨ w' ⟩`in convertCont u
@@ -157,7 +158,7 @@ module LiftedMonomorphize where
     convertCont (`prim_`in_ {h} p t) with h
     ... | x ⦂ τ < w > = `prim convertPrim p w `in convertCont t
     ... | u ∼ x = `prim convertPrim p server `in (`prim convertPrim p client `in convertCont t)
-    convertCont (`go-cc[ w' ] t) = `go-cc[ w' ] convertValue t
+    convertCont (`go-cc[ w' ] str t) = `go-cc[ w' ] str (convertValue t)
     convertCont (`let τ , x `=unpack t `in u) = `let convertType τ , x `=unpack convertValue t `in convertCont u
     convertCont (`open_`in_ {Δ = Δ}{w = w} t u) =
         `open convertValue t `in eq-replace (cong (λ l → l ⊢ᵐ ⋆< w > ) (sym (convertCtx++ {Δ}))) (convertCont u)

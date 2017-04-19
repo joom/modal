@@ -147,8 +147,8 @@ module LambdaLifting where
     liftCont n `halt = n , [] , [] , `halt
     liftCont n (`prim x `in t) with liftCont n t
     ... | n' , xs , Δ , t' = n' , xs , Δ , `prim x `in t'
-    liftCont n (`go-cc[ w' ] u) with liftValue n u
-    ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' ] u')
+    liftCont n (`go-cc[ w' ] str u) with liftValue n u
+    ... | n' , xs , Δ , u' = n' , xs , Δ , (`go-cc[ w' ] ("_go" ++ show n') u')
     liftCont {Γ} n (`let τ , x `=unpack t `in u) with liftValue n t
     ... | n' , xs , Δ , t' with liftCont n' u
     ... | n'' , ys , Φ , u' = n'' , xs +++ ys , ++⁺ Δ Φ ,

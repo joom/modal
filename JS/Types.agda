@@ -3,7 +3,7 @@ module JS.Types where
   open import Data.Bool
   open import Data.Nat hiding (erase)
   import Data.Unit
-  open import Data.Maybe
+  open import Data.Maybe hiding (All)
   open import Data.Product
   open import Data.Sum
   open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -13,6 +13,7 @@ module JS.Types where
   open import Data.Nat.Show
   open import Data.List
   open import Data.List.Any
+  open import Data.List.All
   open import Data.List.Properties using (∷-injective)
   open Membership-≡ using (_∈_; _⊆_)
   open import Data.Empty
@@ -32,11 +33,18 @@ module JS.Types where
     `NumberEq : EqType `Number
     `StringEq : EqType `String
 
+  data _mobile : Type → Set where
+    `Boolᵐ : `Bool mobile
+    `Numberᵐ : `Number mobile
+    `Stringᵐ : `String mobile
+    `Objectᵐ : ∀ {pairs} → All (λ { ( _ , τ ) → τ mobile }) pairs → (`Object pairs) mobile
+
+
   data Hyp : Set where
-    _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp -- Value
+    _⦂_<_> : (x : Id) (τ : Type) (w : World) → Hyp
 
   data Conc : Set where
-    _<_> : (τ : Type) (w : World) → Conc -- Expression
+    _<_> : (τ : Type) (w : World) → Conc
 
   Context = List Hyp
 

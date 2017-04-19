@@ -23,6 +23,7 @@ module ML5.Terms where
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
     `alert : Prim ("alert" ⦂ ` `String ⇒ `Unit  < client >)
+    `write : Prim ("write" ⦂ ` `String ⇒ `Unit  < client >)
     `version : Prim ("version" ⦂ `String < server > )
     `log : Prim ("log" ∼ (λ _ → ` `String ⇒ `Unit))
     `prompt : Prim ("prompt" ⦂ ` `String ⇒ `String < client >)
@@ -73,6 +74,6 @@ module ML5.Terms where
     -- Other
     `val : ∀ {τ w} → Γ ⊢ ↓ τ < w > → Γ ⊢ τ < w >
     `get : ∀ {τ w w'} {m : τ mobile} → Γ ⊢ τ < w' > → Γ ⊢ τ < w >
-    `put : ∀ {C σ w} {m : (C w) mobile} (u : Id) → Γ ⊢ C w < w > → ((u ∼ C) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
+    `put : ∀ {τ σ w} {m : τ mobile} (u : Id) → Γ ⊢ τ < w > → ((u ∼ (λ _ → τ)) ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >
     -- Primitive imports
     `prim_`in_ : ∀ {h w σ} (x : Prim h) → (h ∷ Γ) ⊢ σ < w > → Γ ⊢ σ < w >

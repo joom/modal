@@ -45,11 +45,11 @@ module LiftedMonomorphicToJS where
     hypToPair (x ⦂ τ < w >) = x , convertType {w} τ
 
     -- because Agda thinks mapping a list doesn't terminate.
-    hypsToPair : {w : World} → List Hypᵐ → List (Id × Typeⱼ)
-    hypsToPair [] = []
-    hypsToPair {w} ((x ⦂ τ < w' >) ∷ xs) with w decW w'
-    hypsToPair ((x ⦂ τ < w >) ∷ xs) | yes refl = hypToPair (x ⦂ τ < w >) ∷ hypsToPair {w} xs
-    ... | no q = hypsToPair {w} xs
+    hypsToPair : (w : World) → List Hypᵐ → List (Id × Typeⱼ)
+    hypsToPair _ [] = []
+    hypsToPair w ((x ⦂ τ < w' >) ∷ xs) with w decW w'
+    hypsToPair _ ((x ⦂ τ < w >) ∷ xs) | yes refl = hypToPair (x ⦂ τ < w >) ∷ hypsToPair w xs
+    ... | no q = hypsToPair w xs
 
     convertType : {w : World} → Typeᵐ → Typeⱼ
     convertType `Int = `Number
@@ -59,7 +59,7 @@ module LiftedMonomorphicToJS where
     convertType {w} ` τ cont = `Function [ convertType {w} τ ] `Undefined
     convertType {w} (` τ × σ) = `Object (("type" , `String) ∷ ("fst" , convertType {w} τ ) ∷ ("snd" , convertType {w} σ) ∷ [])
     convertType {w} (` τ ⊎ σ) = `Object (("type" , `String) ∷ ("dir" , `String) ∷ ("inl" , convertType {w} τ) ∷ ("inr" , convertType {w} σ) ∷ [])
-    convertType {w} (` τ at w') = convertType {w} τ
+    convertType {w} (` τ at w') = `Function [ convertType {w} τ ] `Undefined -- convertType {w} τ
     convertType {w} (`⌘ C) = convertType {w} (C w)
     convertType {w} (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
     convertType {w} (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
@@ -67,9 +67,10 @@ module LiftedMonomorphicToJS where
     -- convertType {w} (`∀ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
     -- convertType {w} (`∃ C) = `Function [ `Object (("type" , `String) ∷ []) ] (convertType {w} (C client))
     convertType {w} (`Σt[t×[_×t]cont] τ) = `Σt[t×[_×t]cont] (convertType {w} τ)
-    convertType {w} (`Env Γ) = `Object (hypsToPair {w} Γ)
+    convertType {w} (`Env Γ) = `Object (hypsToPair w Γ)
 
   convertHyp : Hypᵐ → Hypⱼ
+  -- convertHyp (x ⦂ ` τ at ω < w >) = x convertType τ < ω >
   convertHyp (x ⦂ τ < w >) = x ⦂ convertType {w} τ < w >
 
   convertCtx : Contextᵐ → Contextⱼ
@@ -90,6 +91,7 @@ module LiftedMonomorphicToJS where
 
   convertPrim : ∀ {h} → LiftedMonomorphic.Terms.Prim h → JS.Terms.Prim (convertHyp h)
   convertPrim `alert = `alert
+  convertPrim `write = `write
   convertPrim `version = `version
   convertPrim `logCli = `logCli
   convertPrim `logSer = `logSer
@@ -163,12 +165,12 @@ module LiftedMonomorphicToJS where
     ... | t' , (Δ' , tCli) , (Φ' , tSer)
       with convertCont {_}{_ ∷ (Δ' +++ Δ)}{_ ∷ (Φ' +++ Φ)}{s = sub-lemma (++ʳ Δ' ∘ s)}{s' = sub-lemma (++ʳ Φ' ∘ s')} w v
     ... | (Δ'' , vCli) , (Φ'' , vSer) with w
-    ... | client = trustMe3
-        --   (_ , (tCli ； `var u (⊆-exp-lemma {!!} t') ； vCli))
-        -- , (_ , (`var u (⊆-exp-lemma s' {!!}) ； {!vSer!}))
-    ... | server = trustMe3
-        --   (_ , (`var u (⊆-exp-lemma s {!t'!}) ； {!!}))
-        -- , (_ , (tSer ； (`var u (⊆-exp-lemma {!!} t') ； vSer)))
+    ... | client =
+          (_ , (tCli ； `var u (⊆-exp-lemma (++ʳ Δ' ∘ s) t') ； vCli))
+        , (_ , (tSer ； (`var u (default _) ； vSer ； `comment "TODO fix"))) -- TODO
+    ... | server =
+          (_ , (tCli ； (`var u (default _) ； vCli ； `comment "TODO fix"))) -- TODO
+        , (_ , (tSer ； `var u (⊆-exp-lemma (++ʳ Φ' ∘ s') t') ； vSer))
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`let x `=fst t `in u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`let x `=fst t `in u) | t' , (Δ' , tCli) , (Φ' , tSer)
       with convertCont {_}{_ ∷ (Δ' +++ Δ)}{Φ' +++ Φ}{s = sub-lemma (++ʳ Δ' ∘ s)}{s' = ++ʳ Φ' ∘ s'} client u
@@ -206,15 +208,28 @@ module LiftedMonomorphicToJS where
 -- uCli ； `exp (`λ_⇒_ {_}{{!!}}{_}{_} ("a" ∷ []) (`nop ；return ⊆-exp-lemma (++ʳ Δ'' ∘ ++ʳ Δ' ∘ s) t'))
 
     -- Uninteresting cases of go-cc
-    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`go-cc[ client ] t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`go-cc[ client ] str t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer) = (_ , (tCli ； `exp (⊆-exp-lemma (++ʳ Δ' ∘ s) t'))) , (_ , tSer)
-    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`go-cc[ server ] t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`go-cc[ server ] str t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer) = (_ , tCli) , (_ , (tSer ； `exp (⊆-exp-lemma (++ʳ Φ' ∘ s') t')))
 
     -- Interesting cases of go-cc
-    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`go-cc[ server ] t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} client (`go-cc[ server ] str t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
     ... | t' , (Δ' , tCli) , (Φ' , tSer) = trustMe6
-    convertCont server (`go-cc[ client ] t) = trustMe6
+        --   (_ , (tCli ； `prim `socketCli ； `comment "receive from server"
+        --              ； `exp (` `proj (`v "socket" (here refl)) "on" (here refl)
+        --              · ((`string str Data.List.All.∷ ((`λ "data" ∷ [] ⇒ `comment "received data from server") Data.List.All.∷ Data.List.All.[]))))))
+        -- , (_ , (tSer ； `prim `socketSer ； `comment "send to client"
+        --              ； `exp (` `proj (`v "socket" (here refl)) "emit" (there (here refl))
+        --                       · ((`string str Data.List.All.∷ (`stringify (⊆-exp-lemma (there ∘ ++ʳ Φ' ∘ s') t') Data.List.All.∷ Data.List.All.[]))))))
+    convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`go-cc[ client ] str t) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
+    ... | t' , (Δ' , tCli) , (Φ' , tSer) = trustMe6
+      --   (_ , (tCli ； `prim `socketCli ； `comment "send to server"
+      --              ； `exp (` `proj (`v "socket" (here refl)) "emit" (there (here refl))
+      --                      · ((`string str Data.List.All.∷ (`stringify (⊆-exp-lemma (there ∘ ++ʳ Δ' ∘ s) t') Data.List.All.∷ Data.List.All.[]))))))
+      -- , (_ , (tSer ； `prim `socketSer ； `comment "receive from client"
+      -- ； `exp (` `proj (`v "socket" (here refl)) "on" (here refl)
+      --          · (`string str Data.List.All.∷ ((`λ "data" ∷ [] ⇒ `comment "received data from client") Data.List.All.∷ Data.List.All.[])))))
 
     -- Function call
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} w (`call t u) with convertValue {Γ}{Δ}{Φ}{s = s}{s' = s'} t
@@ -264,7 +279,7 @@ module LiftedMonomorphicToJS where
         client u
     ... | (Δ'' , uCli) , (Φ'' , uSer) =
           (_ , (tCli ； (openEnv {Δ' +++ Δ}{δ}{δ} id (⊆-exp-lemma (++ʳ Δ' ∘ s) t') ； uCli)))
-        , (_ , (tSer ； (openEnv {Φ' +++ Φ}{δ}{δ} id (eq-replace trustMe (`obj {Φ' +++ Φ}{server} [])) ； uSer)))
+        , (_ , (tSer ； (openEnv {Φ' +++ Φ}{δ}{δ} id (default _) ； uSer)))
     convertCont {Γ}{Δ}{Φ}{s = s}{s' = s'} server (`open_`in_ {Δ = δ} t u) | t' , (Δ' , tCli) , (Φ' , tSer)
       with convertCont {δ +++ Γ}{onlyCliCtx (convertCtx δ) +++ (Δ' +++ Δ)}{onlySerCtx (convertCtx δ) +++ (Φ' +++ Φ)}
            {s = Data.List.Any.Membership._++-mono_ {xs₁ = onlyCliCtx (convertCtx δ)}{xs₂ = onlyCliCtx (convertCtx Γ)}{ys₂ = Δ' +++ Δ} id (++ʳ Δ' ∘ s)
@@ -273,10 +288,10 @@ module LiftedMonomorphicToJS where
                 ∘ ⊆-≡ (onlySerCtx++ {convertCtx δ}{convertCtx Γ})  ∘ ⊆-≡ (cong onlySerCtx (convertCtx++ {δ}{Γ}))}
                 server u
     ... | (Δ'' , uCli) , (Φ'' , uSer) =
-          (_ , (tCli ； (openEnv {Δ' +++ Δ}{δ}{δ} id (eq-replace trustMe (`obj {Δ' +++ Δ}{client} [])) ； uCli)))
+          (_ , (tCli ； (openEnv {Δ' +++ Δ}{δ}{δ} id (default _) ； uCli)))
         , (_ , (tSer ； (openEnv {Φ' +++ Φ}{δ}{δ} id (⊆-exp-lemma (++ʳ Φ' ∘ s') t') ； uSer)))
 
-    hypsToPair∈ : ∀ {Δ x τ w} → (x ⦂ τ < w >) ∈ Δ → (x , convertType {w} τ) ∈ hypsToPair {w} Δ
+    hypsToPair∈ : ∀ {Δ x τ w} → (x ⦂ τ < w >) ∈ Δ → (x , convertType {w} τ) ∈ hypsToPair w Δ
     hypsToPair∈ {w = w} (here refl) with w decW w
     hypsToPair∈ (here refl) | yes refl = here refl
     ... | no q = ⊥-elim (q refl)
@@ -285,7 +300,7 @@ module LiftedMonomorphicToJS where
     ... | no q = hypsToPair∈ i
 
     openEnv : ∀ {Γ δ Δ mσ w} → δ ⊆ Δ
-                              → Γ ⊢ⱼ (`Object (hypsToPair {w} Δ) < w >)
+                              → Γ ⊢ⱼ (`Object (hypsToPair w Δ) < w >)
                               → FnStm Γ ⇓ only w (convertCtx δ) ⦂ mσ < w >
     openEnv {δ = []} {w = client} s t = `nop
     openEnv {δ = []} {w = server} s t = `nop
@@ -297,7 +312,6 @@ module LiftedMonomorphicToJS where
       ； `var x (`proj (⊆-exp-lemma (++ʳ (onlySerCtx (convertCtx δ))) t) x (hypsToPair∈ (s (here refl))))
     openEnv {Γ}{δ = (x ⦂ τ < server >) ∷ δ}{Δ} {w = client} s t = openEnv {Γ}{δ}{Δ} (sub-lemma' s) t
     openEnv {Γ}{δ = (x ⦂ τ < client >) ∷ δ}{Δ} {w = server} s t = openEnv {Γ}{δ}{Δ} (sub-lemma' s) t
-
 
     convertValue : ∀ {Γ Δ Φ τ w}
                  → {s : only client (convertCtx Γ) ⊆ Δ}
@@ -377,14 +391,14 @@ module LiftedMonomorphicToJS where
         ... | no q = envList hs (s ∘ there) w
         envList ((x ⦂ τ < w' >) ∷ hs) s .w' | yes refl =
                 (x , convertType {w'} τ , `v x (convert∈ (s (here refl)))) ∷ envList hs (s ∘ there) w'
-        pf' : (xs : _) (s : xs ⊆ Γ) (w : World) → toTypePairs (envList xs s w) ≡ hypsToPair {w} xs
+        pf' : (xs : _) (s : xs ⊆ Γ) (w : World) → toTypePairs (envList xs s w) ≡ hypsToPair w xs
         pf' [] s w = refl
         pf' ((x ⦂ τ < w' >) ∷ xs) s w with w decW w'
         ... | no q = pf' xs (s ∘ there) w
         pf' ((x ⦂ τ < w' >) ∷ xs) s .w' | yes refl = cong (λ l → (x , convertType τ) ∷ l) (pf' xs (s ∘ there) w')
 
-  convertλ : ∀ {Γ} → (id : Id) (τ : Typeᵐ) (w : World) → [] ⊢ᵐ ↓ τ < w >
-           → FnStm Γ ⇓ ((id ⦂ convertType τ < w >) ∷ []) ⦂ nothing < w >
+  convertλ : (id : Id) (τ : Typeᵐ) (w : World) → [] ⊢ᵐ ↓ τ < w >
+           → FnStm [] ⇓ ((id ⦂ convertType τ < w >) ∷ []) ⦂ nothing < w >
              × Σ _ (λ Γ → FnStm [] ⇓ Γ ⦂ nothing < client >)
              × Σ _ (λ Δ → FnStm [] ⇓ Δ ⦂ nothing < server >)
   convertλ id τ w t with convertValue {[]}{[]}{[]}{s = λ ()}{s' = λ ()} t
@@ -397,11 +411,11 @@ module LiftedMonomorphicToJS where
             → Σ _ (λ { (Γ , Δ) → (FnStm [] ⇓ Γ ⦂ nothing < client > × only client (convertCtx (toCtx xs)) ⊆ Γ)
                                  × (FnStm [] ⇓ Δ ⦂ nothing < server > × only server (convertCtx (toCtx xs)) ⊆ Δ) })
   convertλs Data.List.All.[] = ([] , []) , ((`nop , (λ ())) , (`nop , (λ ())) )
-  convertλs (Data.List.All._∷_ {id , τ , client} t rest) with convertλ {[]} id τ client t | convertλs rest
+  convertλs (Data.List.All._∷_ {id , τ , client} t rest) with convertλ id τ client t | convertλs rest
   ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , Δ') , (cliFnStm , s) , (serFnStm , s') =
       (_ , _) , ((cliFnStm ； ⊆-fnstm-lemma (λ ()) cli ； ⊆-fnstm-lemma (λ ()) fnStm) , sub-lemma (++ʳ Γ ∘ s))
               , ((serFnStm ； ⊆-fnstm-lemma (λ ()) ser) , ++ʳ Δ ∘ s')
-  convertλs (Data.List.All._∷_ {id , τ , server} t rest) with convertλ {[]} id τ server t | convertλs rest
+  convertλs (Data.List.All._∷_ {id , τ , server} t rest) with convertλ id τ server t | convertλs rest
   ... | fnStm , (Γ , cli) , (Δ , ser) | (Γ' , Δ') , (cliFnStm , s) , (serFnStm , s') =
       (_ , _) , ((cliFnStm ； ⊆-fnstm-lemma (λ ()) cli ) , ++ʳ Γ ∘ s)
               , ((serFnStm ； ⊆-fnstm-lemma (λ ()) ser ； ⊆-fnstm-lemma (λ ()) fnStm) , sub-lemma (++ʳ Δ ∘ s'))
@@ -421,6 +435,6 @@ module LiftedMonomorphicToJS where
   entryPoint (xs , all , t) with convertλs all
   ... | (Γ' , Δ') , (cliFnStmLifted , s) , (serFnStmLifted , s')
     with convertCont {toCtx xs}{Γ' +++ []}{Δ' +++ []}{s = ++ˡ ∘ s}{s' = ++ˡ ∘ s'} _ t
-  ... | (δ , cliFnStm) , (φ , serFnStm) =
+  ... | (_ , cliFnStm) , (_ , serFnStm) =
         `exp ((` `λ [] ⇒ (cliFnStmLifted ； cliFnStm ；return `undefined) · Data.List.All.[]))
       , `exp ((` `λ [] ⇒ (serFnStmLifted ； serFnStm ；return `undefined) · Data.List.All.[]))

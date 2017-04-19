@@ -41,21 +41,15 @@ module Example where
   -- example programs
 
   logVersion : [] ⊢₅ `Unit < client >
-  logVersion = ` `val (`λ "x" ⦂ `String ⇒ (`prim `alert `in (` `val (`v "alert" (here refl)) · `val (`v "x" (there (here refl))))))
-               · `val (`string "hello world")
-
-  -- logVersion = `prim `alert `in `prim `prompt `in
-  --              (` `val (`v "alert" (there (here refl))) · (` `val (`v "prompt" (here refl)) · `val (`string "Write something")))
-
-  -- logVersion = `prim `log `in (` `val (`vval "log" (here refl)) · `val (`string "hello there"))
-  -- logVersion = ` `val (`λ "x" ⦂ `Unit ⇒ `val `tt) · `val `tt
-  -- logVersion = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
-
-  -- logVersion =
-  --   `prim `version `in
-  --   `prim `log `in
-  --   (` `val (`vval "log" (here refl))
-  --    · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
+  logVersion =
+  -- `prim `version `in
+  -- `prim `log `in
+  -- (` `val (`vval "log" (here refl))
+  --  · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
+    `prim `version `in
+    `prim `write `in
+    (` `val (`v "write" (here refl))
+     · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
 
   logVersionCPS : [] ⊢ₓ ⋆< client >
   logVersionCPS = ML5toCPS.convertExpr (λ v → `halt) logVersion
@@ -84,8 +78,8 @@ module Example where
   file =
     `prim `prompt `in
     `prim `readFile `in
-    `prim `alert `in
-    (` `val (`v "alert" (here refl))
+    `prim `write `in
+    (` `val (`v "write" (here refl))
      · `get {m = `Stringᵐ}  (` `val (`v "readFile" (there (here refl)))
                              · `get {m = `Stringᵐ} (` `val (`v "prompt" (there (there (here refl))))
                                                     · `val (`string "Enter file name"))))

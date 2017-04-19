@@ -24,6 +24,7 @@ module LiftedMonomorphic.Terms where
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
     `alert : Prim ( "alert" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client > )
+    `write : Prim ( "write" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client > )
     `version : Prim ( "version" ⦂ `String < server > )
     `logCli : Prim ("log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < client >)
     `logSer : Prim ("log" ⦂ (`Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]) < server >)
@@ -67,7 +68,8 @@ module LiftedMonomorphic.Terms where
                            → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → ((y ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `leta_`=_`in_ : ∀ {τ w w'} → (x : Id) → Γ ⊢ ↓ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `lets_`=_`in_ : ∀ {C w} → (u : Id) → Γ ⊢ ↓ (`⌘ C) < w > → ((u ⦂ C client < client >) ∷ (u ⦂ C server < server >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `put_`=_`in_ : ∀ {w} {C : World → Type} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ⦂ C client < client >) ∷ (u ⦂ C server < server >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    -- `put_`=_`in_ : ∀ {w} {C : World → Type} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ⦂ C client < client >) ∷ (u ⦂ C server < server >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `put_`=_`in_ : ∀ {τ w} {m : τ mobile} → (u : Id) → Γ ⊢ ↓ τ < w > → ((u ⦂ τ < client >) ∷ (u ⦂ τ < server >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=_⟨_⟩`in_ : ∀ {C w} → (x : Id) → Γ ⊢ ↓ `∀ C < w > → (w' : World) → ((x ⦂ C w' < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
@@ -77,7 +79,8 @@ module LiftedMonomorphic.Terms where
     -- Primitive imports
     `prim_`in_ : ∀ {h w} → (x : Prim h) → (h ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     -- Closure terms
-    `go-cc[_]_ : ∀ {w} → (w' : World)
+    `go-cc[_] : ∀ {w} → (w' : World)
+                         → Data.String.String
                          → Γ ⊢ ↓ `Σt[t×[ `Unit ×t]cont] < w' >
                          → Γ ⊢ ⋆< w >
     `packΣ : ∀ {σ w} → (τ : Type) → Γ ⊢ ↓ (` τ × ` (` σ × τ) cont) < w >  → Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >
@@ -101,13 +104,13 @@ module LiftedMonomorphic.Terms where
       `letcase x , y `= ⊆-term-lemma s t `in ⊆-cont-lemma (sub-lemma s) u `or ⊆-cont-lemma (sub-lemma s) v
     ⊆-cont-lemma s (`leta x `= t `in u) = `leta x `= (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`lets u `= t `in v) = `lets u `= (⊆-term-lemma s t) `in ⊆-cont-lemma (sub-lemma (sub-lemma s)) v -- (⊆-cont-lemma (sub-lemma s) v)
-    ⊆-cont-lemma s (`put_`=_`in_ {C = C}{m = m} u t v) = `put_`=_`in_ {C = C}{m = m} u (⊆-term-lemma s t) (⊆-cont-lemma (sub-lemma (sub-lemma s)) v)
+    ⊆-cont-lemma s (`put_`=_`in_ {m = m} u t v) = `put_`=_`in_ {m = m} u (⊆-term-lemma s t) (⊆-cont-lemma (sub-lemma (sub-lemma s)) v)
     ⊆-cont-lemma s (`let x `=fst t `in u) = `let x `=fst (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`let x `=snd t `in u) = `let x `=snd (⊆-term-lemma s t) `in (⊆-cont-lemma (sub-lemma s) u)
     ⊆-cont-lemma s (`let x `= t ⟨ w' ⟩`in u) = `let x `= (⊆-term-lemma s t) ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma s) u
     ⊆-cont-lemma s (`let_=`unpack_`in_ x t u) =
       `let_=`unpack_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
-    ⊆-cont-lemma s (`go-cc[ w' ] u) = `go-cc[ w' ] (⊆-term-lemma s u)
+    ⊆-cont-lemma s (`go-cc[ w' ] str u) = `go-cc[ w' ] str (⊆-term-lemma s u)
     ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
     ⊆-cont-lemma s `halt = `halt
     ⊆-cont-lemma s (`prim_`in_ {h} x t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t

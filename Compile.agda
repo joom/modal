@@ -24,12 +24,7 @@ module Compile where
   open import Definitions
   open import ML5.Types renaming (Type to Type₅ ; Hyp to Hyp₅)
   open import ML5.Terms renaming (_⊢_ to _⊢₅_)
-  open import CPS.Types renaming (Type to Typeₓ ; Hyp to Hypₓ)
-  open import CPS.Terms renaming (_⊢_ to _⊢ₓ_)
-  open import Closure.Types renaming (Type to Typeₒ ; Hyp to Hypₒ ; Context to Contextₒ)
-  open import Closure.Terms renaming (_⊢_ to _⊢ₒ_)
-  open import LiftedMonomorphic.Types renaming (Type to Typeᵐ ; Hyp to Hypᵐ ; Context to Contextᵐ)
-  open import LiftedMonomorphic.Terms renaming (_⊢_ to _⊢ᵐ_)
+  import CPS.Terms
   open import JS.Types renaming (Type to Typeⱼ ; Hyp to Hypⱼ)
   open import JS.Terms renaming (_⊢_ to _⊢ⱼ_)
   open import JS.Source
@@ -42,26 +37,43 @@ module Compile where
   FilePath = String
 
   compileToJS : [] ⊢₅ `Unit < client > → String × String
-  compileToJS = (stmSource *** stmSource)
+  compileToJS = (clientWrapper *** serverWrapper)
+              ∘ (stmSource *** stmSource)
               ∘ LiftedMonomorphicToJS.entryPoint
               ∘ LiftedMonomorphize.entryPoint
               ∘ LambdaLifting.entryPoint
               ∘ CPStoClosure.convertCont
-              ∘ ML5toCPS.convertExpr (λ v → `halt)
+              ∘ ML5toCPS.convertExpr (λ v → CPS.Terms.`halt)
 
   writeToFile : FilePath → String × String → IO ⊤
   writeToFile path (cli , ser) =
-    ♯ writeFile (path ++ "cli.js") cli >>
-    ♯ writeFile (path ++ "ser.js") cli
+    ♯ writeFile (path ++ "index.html") cli >>
+    ♯ writeFile (path ++ "app.js") ser
 
   compile : [] ⊢₅ `Unit < client > → IO ⊤
-  compile = writeToFile "program_" ∘ compileToJS
+  compile = writeToFile "" ∘ compileToJS
 
   program : [] ⊢₅ `Unit < client >
   -- program = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
-  program = `prim `alert `in `val `tt
+  -- program = `prim `alert `in `val `tt
   -- program = ` `val (`λ "x" ⦂ `Unit ⇒ `val `tt) · `val `tt
   -- program = `prim `alert `in `prim `prompt `in
   --           (` `val (`v "alert" (there (here refl))) · (` `val (`v "prompt" (here refl)) · `val (`string "Write something")))
+  -- program = ` `val (`λ "x" ⦂ `String ⇒ (`prim `alert `in (` `val (`v "alert" (here refl)) · `val (`v "x" (there (here refl))))))
+  --              · `val (`string "hello world")
+  -- program = `prim `alert `in `prim `prompt `in
+  --              (` `val (`v "alert" (there (here refl))) · (` `val (`v "prompt" (here refl)) · `val (`string "Write something")))
+  -- program = `prim `readFile `in `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
+  -- program = `prim `log `in (` `val (`vval "log" (here refl)) · `val (`string "hello there"))
+  -- program = ` `val (`λ "x" ⦂ `Unit ⇒ `val `tt) · `val `tt
+  -- program = `prim `alert `in (` `val (`v "alert" (here refl)) · `val (`string "hello world"))
+  -- program = `prim `write `in (` `val (`v "write" (here refl)) · (`if `val `true `then `val (`string "yes") `else `val (`string "no")))
+  program = `prim `version `in
+            `prim `write `in
+            (` `val (`v "write" (here refl))
+            · `get {m = `Stringᵐ} (`val (`v "version" (there (here refl)))))
+
+  output : String × String
+  output = compileToJS program
 
   main = run (compile program)

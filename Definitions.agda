@@ -22,7 +22,7 @@ module Definitions where
   open import Function
 
   postulate
-    trustMe trustMe1 trustMe2 trustMe3 trustMe4 trustMe5 trustMe6 trustMe7 trustMe8 : ∀ {ℓ}{A : Set ℓ} → A
+    permanentTrustMe trustMe trustMe1 trustMe2 trustMe3 trustMe4 trustMe5 trustMe6 trustMe7 trustMe8 : ∀ {ℓ}{A : Set ℓ} → A
 
   isJust : ∀ {ℓ} {A : Set ℓ} → Maybe A → Set
   isJust (just _) = Data.Unit.⊤

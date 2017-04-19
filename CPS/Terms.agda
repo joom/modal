@@ -23,6 +23,7 @@ module CPS.Terms where
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
     `alert : Prim ("alert" ⦂ ` ` `String × ` `Unit cont cont < client >)
+    `write : Prim ("write" ⦂ ` ` `String × ` `Unit cont cont < client >)
     `version : Prim ("version" ⦂ `String < server > )
     `log : Prim ("log" ∼ (λ ω → ` ` `String × ` `Unit cont cont))
     `prompt : Prim ("prompt" ⦂ ` ` `String × ` `String cont cont < client >)
@@ -66,7 +67,8 @@ module CPS.Terms where
                            → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → ((y ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `leta_`=_`in_ : ∀ {τ w w'} → (x : Id) → Γ ⊢ ↓ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `lets_`=_`in_ : ∀ {C w} → (u : Id) → Γ ⊢ ↓ (`⌘ C) < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    -- `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `put_`=_`in_ : ∀ {τ w} {m : τ mobile} → (u : Id) → Γ ⊢ ↓ τ < w > → ((u ∼ (λ _ → τ)) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=_⟨_⟩`in_ : ∀ {C w} → (x : Id) → Γ ⊢ ↓ `∀ C < w > → (w' : World) → ((x ⦂ C w' < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >

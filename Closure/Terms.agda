@@ -24,6 +24,7 @@ module Closure.Terms where
   -- Valid values and values of the primitives of our language.
   data Prim : Hyp → Set where
     `alert : Prim ("alert" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client >)
+    `write : Prim ("write" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont] < client >)
     `version : Prim ("version" ⦂ `String < server >)
     `log : Prim ("log" ∼ (λ ω → `Σt[t×[ ` `String × `Σt[t×[ `Unit ×t]cont] ×t]cont]))
     `prompt : Prim ("prompt" ⦂ `Σt[t×[ ` `String × `Σt[t×[ `String ×t]cont] ×t]cont] < client >)
@@ -67,7 +68,8 @@ module Closure.Terms where
                            → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → ((y ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `leta_`=_`in_ : ∀ {τ w w'} → (x : Id) → Γ ⊢ ↓ (` τ at w') < w > → ((x ⦂ τ < w' >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `lets_`=_`in_ : ∀ {C w} → (u : Id) → Γ ⊢ ↓ (`⌘ C) < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
-    `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    -- `put_`=_`in_ : ∀ {C w} {m : (C w) mobile} → (u : Id) → Γ ⊢ ↓ C w < w > → ((u ∼ C) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
+    `put_`=_`in_ : ∀ {τ w} {m : τ mobile} → (u : Id) → Γ ⊢ ↓ τ < w > → ((u ∼ (λ _ → τ)) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=fst_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ τ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=snd_`in_ : ∀ {τ σ w} → (x : Id) → Γ ⊢ ↓ (` τ × σ) < w > → ((x ⦂ σ < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     `let_`=_⟨_⟩`in_ : ∀ {C w} → (x : Id) → Γ ⊢ ↓ `∀ C < w > → (w' : World) → ((x ⦂ C w' < w >) ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
@@ -77,7 +79,8 @@ module Closure.Terms where
     -- Primitive imports
     `prim_`in_ : ∀ {h w} → (x : Prim h) → (h ∷ Γ) ⊢ ⋆< w > → Γ ⊢ ⋆< w >
     -- Closure terms
-    `go-cc[_]_ : ∀ {w} → (w' : World)
+    `go-cc[_] : ∀ {w} → (w' : World)
+                       → Data.String.String
                          → Γ ⊢ ↓ `Σt[t×[ `Unit ×t]cont] < w' >
                          → Γ ⊢ ⋆< w >
     `packΣ : ∀ {σ w} → (τ : Type) → Γ ⊢ ↓ (` τ × ` (` σ × τ) cont) < w >  → Γ ⊢ ↓ `Σt[t×[ σ ×t]cont] < w >
@@ -107,7 +110,7 @@ module Closure.Terms where
     ⊆-cont-lemma s (`let x `= t ⟨ w' ⟩`in u) = `let x `= (⊆-term-lemma s t) ⟨ w' ⟩`in ⊆-cont-lemma (sub-lemma s) u
     ⊆-cont-lemma s (`let_=`unpack_`in_ x t u) =
       `let_=`unpack_`in_ x (⊆-term-lemma s t) (λ ω → ⊆-cont-lemma (sub-lemma s) (u ω))
-    ⊆-cont-lemma s (`go-cc[ w' ] u) = `go-cc[ w' ] (⊆-term-lemma s u)
+    ⊆-cont-lemma s (`go-cc[ w' ] str u) = `go-cc[ w' ] str (⊆-term-lemma s u)
     ⊆-cont-lemma s (`call t u) = `call (⊆-term-lemma s t) (⊆-term-lemma s u)
     ⊆-cont-lemma s `halt = `halt
     ⊆-cont-lemma s (`prim x `in t) = `prim x `in ⊆-cont-lemma (sub-lemma s) t

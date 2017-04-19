@@ -59,37 +59,69 @@ module JS.Source where
     termSource (`packΣ τ t) = termSource t
     termSource (`proj₁Σ t) = termSource t ++ "[\"fst\"]"
     termSource (`proj₂Σ t) = termSource t ++ "[\"snd\"]"
+    termSource (`serialize t) = "JSON.stringify(" ++ termSource t ++ ")"
+    termSource (`deserialize t) = "JSON.parse(" ++ termSource t ++ ")"
 
     stmSource : ∀ {Γ w} → Stm Γ < w > → String
     stmSource (`exp x) = termSource x ++ ";"
 
     primSource : ∀ {h} → Prim h → String
-    primSource `alert = "var alert = {\"type\" : \"pair\", \"fst\" : {}, \"snd\" : (function(obj) {window.alert(obj.fst.fst); obj.fst.snd.snd({\"type\" : \"pair\", \"fst\" : {\"type\" : \"unit\"}, \"snd\" : obj.snd});})};"
-    primSource `version = "var version = \"0.0.1\";"
-    primSource `logCli = "var log = {\"type\" : \"pair\", \"fst\" : {}, \"snd\" : (function(obj) {console.log(obj.fst.fst); obj.fst.snd.snd({\"type\" : \"pair\", \"fst\" : {\"type\" : \"unit\"}, \"snd\" : obj.snd});})};"
-    primSource `logSer = "var log = {\"type\" : \"pair\", \"fst\" : {}, \"snd\" : (function(obj) {console.log(obj.fst.fst); obj.fst.snd.snd({\"type\" : \"pair\", \"fst\" : {\"type\" : \"unit\"}, \"snd\" : obj.snd});})};"
-    primSource `prompt = "var prompt = {\"type\" : \"pair\", \"fst\" : {}, \"snd\" : (function(obj) {obj.fst.snd.snd({\"type\" : \"pair\", \"fst\" : window.prompt(obj.fst.fst), \"snd\" : obj.fst.snd.fst});})};"
-    primSource _ = trustMe
-    -- primSource `readFile = "var readFile = function(obj) {require(\"fs\").readFile(obj.fst, \"utf-8\", function (err, data) {if(err) {throw err;} obj.snd(data);});}"
-    -- primSource `socket = "var socket = io();"
-    -- primSource `io = "var app = require('express')();"
-    --               ++ "var http = require('http').Server(app);"
-    --               ++ "app.get('/', function(req, res) {res.sendFile(__dirname + '/index.html');});"
-    --               ++ "http.listen(3000, function() {console.log('listening on *:3000');});"
-    --               ++ "var _io = require('socket.io')(http);"
+    primSource `alert = "var alert = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {window.alert(obj.fst.fst); obj.fst.snd.snd({'type' : 'pair', 'fst' : {'type' : 'unit'}, 'snd' : obj.snd});})};"
+    primSource `write = "var write = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {window.document.querySelector('#result').innerHTML = obj.fst.fst; obj.fst.snd.snd({'type' : 'pair', 'fst' : {'type' : 'unit'}, 'snd' : obj.snd});})};"
+    primSource `version = "var version = '0.0.1';"
+    primSource `logCli = "var log = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {console.log(obj.fst.fst); obj.fst.snd.snd({'type' : 'pair', 'fst' : {'type' : 'unit'}, 'snd' : obj.snd});})};"
+    primSource `logSer = "var log = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {console.log(obj.fst.fst); obj.fst.snd.snd({'type' : 'pair', 'fst' : {'type' : 'unit'}, 'snd' : obj.snd});})};"
+    primSource `prompt = "var prompt = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {obj.fst.snd.snd({'type' : 'pair', 'fst' : window.prompt(obj.fst.fst), 'snd' : obj.fst.snd.fst});})};"
+    primSource `readFile = "var readFile = {'type' : 'pair', 'fst' : {}, 'snd' : (function(obj) {obj.fst.snd.snd({'type' : 'pair', 'fst' : require('fs').readFileSync(obj.fst.fst), 'snd' : obj.fst.snd.fst});})};"
+    primSource `socketCli = ""
+    primSource `socketSer = ""
 
     fnStmSource : ∀ {Γ Γ' mσ w} → FnStm Γ ⇓ Γ' ⦂ mσ < w > → String
+    fnStmSource (`comment x) = "/* " ++ x ++ " */"
     fnStmSource `nop = ""
     fnStmSource (`exp x) = termSource x ++ ";"
     fnStmSource (`var id t) = "var " ++ id ++ " = " ++ termSource t ++ ";"
-    fnStmSource (`assign id t x) = id ++ " = " ++ termSource t ++ ";"
     fnStmSource (s ；return x) = fnStmSource s ++ ";\nreturn " ++ termSource x ++ ";"
     fnStmSource (s₁ ； s₂) = fnStmSource s₁ ++ fnStmSource s₂
-    fnStmSource (`if b `then t `else u) = "if (" ++ termSource b ++ ") {" ++ fnStmSource t ++ "\n} then {" ++ fnStmSource u ++ "\n}"
+    fnStmSource (`if b `then t `else u) = "if (" ++ termSource b ++ ") {" ++ fnStmSource t ++ "\n} else {" ++ fnStmSource u ++ "\n}"
     fnStmSource (`prim x) = primSource x
 
-  -- a : [] ⊢ `Σt[t×[ `Object (("type" , `String) ∷ ("fst" , `String) ∷ ("snd" , `Σt[t×[ `String ×t]cont]) ∷ []) ×t]cont] < client >
-  -- a = `packΣ (`Object []) (`obj (("type" , _ , `string "pair") ∷
-  --                 ("fst" , _ , `obj []) ∷
-  --                 ("snd" , _ , (`λ "p" ∷ [] ⇒ (`exp (` `proj₂Σ (`proj (`proj (`v "p" (here refl)) "fst" (there (here refl))) "snd" (there (there (here refl))))  · {!!}) ；return `undefined)))
-  --                 ∷ []))
+  clientWrapper : String → String
+  clientWrapper s = "<!doctype html>
+<html>
+<head>
+<title>Compiled program</title>
+</head>
+<body>
+<div id=\"result\"></div>
+<script src=\"https://cdn.socket.io/socket.io-1.4.5.js\"></script>
+<script>
+var socket = io();
+" ++ s ++ "
+</script>
+</html>"
+
+  serverWrapper : String → String
+  serverWrapper s = "
+var port = 3000;
+var app = require('express')();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+
+app.get('/', function(req, res){
+  res.sendfile('index.html');
+});
+
+io.on('connection', function(socket){
+  console.log('a user connected');
+
+  socket.on('disconnect', function(){
+    console.log('user disconnected');
+  });
+
+" ++ s ++ "
+});
+
+http.listen(port, function(){
+  console.log('listening on *:' + port);
+});"

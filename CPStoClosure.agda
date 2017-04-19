@@ -57,6 +57,7 @@ module CPStoClosure where
 
   convertPrim : ∀ {h} → CPS.Terms.Prim h → Closure.Terms.Prim (convertHyp h)
   convertPrim `alert = `alert
+  convertPrim `write = `write
   convertPrim `version = `version
   convertPrim `log = `log
   convertPrim `prompt = `prompt
@@ -72,8 +73,6 @@ module CPStoClosure where
   hypToType : Hypₓ → Typeₒ
   hypToType (x ⦂ τ < w >) = ` (convertType τ) at w
   hypToType (u ∼ C) = `⌘ (λ ω → convertType (C ω))
-
-  -- freeVars : ∀ {Γ w Δ} → Γ ⊢ₓ ⋆< w > → Σ Typeₒ (λ α → Δ ⊢ₒ ↓ α < w >)
 
   contextToType : CPS.Types.Context → Typeₒ
   contextToType = foldr (λ h τ → ` hypToType h × τ) `Unit
@@ -98,7 +97,7 @@ module CPStoClosure where
       `let "f" `=snd `v "p" (there (here refl)) `in
       `call (`v "f" (here refl))
             (` Closure.Terms.⊆-term-lemma (there ∘ there ∘ there) (convertValue u) , `v "e" (there (here refl)))
-    convertCont (`go[ w' ] u) = `go-cc[ w' ] (convertValue (`λ "y" ⦂ `Unit ⇒ CPS.Terms.⊆-cont-lemma there u ))
+    convertCont (`go[ w' ] u) = `go-cc[ w' ] "" (convertValue (`λ "y" ⦂ `Unit ⇒ CPS.Terms.⊆-cont-lemma there u ))
     -- Trivial cases
     convertCont (`if t `then u `else v) = `if convertValue t `then convertCont u `else convertCont v
     convertCont (`letcase x , y `= t `in u `or v) = `letcase x , y `= convertValue t `in convertCont u `or convertCont v
